@@ -1,0 +1,9 @@
+.idea/
+omniglot/
+attributes.txt
+CUB_200_2011/
+__pycache__/
+models/
+.DS_Store
+*.csv
+*.png
