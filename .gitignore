@@ -3,7 +3,7 @@ omniglot/
 attributes.txt
 CUB_200_2011/
 __pycache__/
-models/
+savedmodels/
 .DS_Store
 *.csv
 *.png
