@@ -154,9 +154,9 @@ class ResNet(tResNet):
 def _resnet(arch, block, layers, pretrained, progress, **kwargs):
     model = ResNet(block, layers, **kwargs)
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls[arch],
-                                              progress=progress)
+        state_dict = torch.load('models/pretrained_resnet18.pt')['model_state_dict']
         model.load_state_dict(state_dict)
+        print('pretrained loaded!')
     return model
 
 
@@ -288,16 +288,18 @@ if __name__ == '__main__':
         'resnet101': resnet101,
     }
 
-    model = model_dict[args.model](pretrained=False)
+    model = model_dict[args.model](pretrained=True)
+    torch.save({'model_state_dict': model.state_dict()},
+               'models/pretrained_resnet18.pt')
     # data = torch.randn(2, 3, 64, 64)
     # data = torch.randn(64, 50, 3, 10)
     # data = torch.randn(10, 3, 64, 64)
-    data = torch.randn(64, 64, 3, 30)
-    import pdb
-
-    pdb.set_trace()
-    # model = model.cuda()
-    # data = data.cuda()
-    feat, logit = model(data, is_feat=True)
-    print(feat.shape)
-    print(logit.shape)
+    # data = torch.randn(64, 64, 3, 30)
+    # import pdb
+    #
+    # pdb.set_trace()
+    # # model = model.cuda()
+    # # data = data.cuda()
+    # feat, logit = model(data, is_feat=True)
+    # print(feat.shape)
+    # print(logit.shape)
