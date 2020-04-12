@@ -105,11 +105,11 @@ class CUBTrain(Dataset):
         return image1, image2, torch.from_numpy(np.array([label], dtype=np.float32))
 
 
-class CUBTest(Dataset):
+class CUBTest_Fewshot(Dataset):
 
     def __init__(self, args, transform=None, mode='test'):
         np.random.seed(args.seed)
-        super(CUBTest, self).__init__()
+        super(CUBTest_Fewshot, self).__init__()
         self.transform = transform
         self.times = args.times
         self.way = args.way

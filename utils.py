@@ -10,7 +10,6 @@ from torch.autograd import Variable
 from torchvision.transforms import transforms
 from tqdm import tqdm
 
-
 try:
     from torch.hub import load_state_dict_from_url
 except ImportError:
@@ -136,12 +135,13 @@ def get_args():
 
 class ModelMethods:
 
-    def __init__(self, args):
+    def __init__(self, args, logger):
         id_str = str(time.time())
         id_str = '-time_' + id_str[:id_str.find('.')]
 
         self.model_name = self._parse_args(args)
         self.save_path = os.path.join(args.save_path, self.model_name + id_str)
+        self.logger = logger
 
         if not os.path.exists(self.save_path):
             os.mkdir(self.save_path)
@@ -167,7 +167,7 @@ class ModelMethods:
 
         return name
 
-    def train(self, net, loss_fn, args, trainLoader, valLoader, logger):
+    def train(self, net, loss_fn, args, trainLoader, valLoader):
         net.train()
 
         opt = torch.optim.Adam(net.parameters(), lr=args.lr)
@@ -251,21 +251,21 @@ class ModelMethods:
                                 error += 1
 
                         val_acc = right * 1.0 / (right + error)
-                        logger.info('*' * 70)
+                        self.logger.info('*' * 70)
 
-                        logger.info(
+                        self.logger.info(
                             'epoch: %d, batch: [%d]\tVal set\tcorrect:\t%d\terror:\t%d\tval_acc:%f\tval_loss:\t%f' % (
                                 epoch, batch_id, right, error, val_acc, val_loss))
-                        logger.info('*' * 70)
+                        self.logger.info('*' * 70)
 
                         if val_acc > max_val_acc:
-                            logger.info(
+                            self.logger.info(
                                 'saving model... current val acc: [%f], previous val acc [%f]' % (val_acc, max_val_acc))
-                            best_model = self.save_model(args, net, total_batch_id, logger)
+                            best_model = self.save_model(args, net, total_batch_id, epoch, val_acc)
                             max_val_acc = val_acc
 
                         else:
-                            logger.info('Not saving, best val [%f], current was [%f]' % (max_val_acc, val_acc))
+                            self.logger.info('Not saving, best val [%f], current was [%f]' % (max_val_acc, val_acc))
 
                         queue.append(right * 1.0 / (right + error))
                     train_losses.append(train_loss)
@@ -284,30 +284,61 @@ class ModelMethods:
 
         return net, best_model
 
-    # def test_model(net, args, dataLoader):
-    #     right, error = 0, 0
-    #     for _, (test1, test2) in enumerate(dataLoader, 1):
-    #         if args.cuda:
-    #             test1, test2 = test1.cuda(), test2.cuda()
-    #         test1, test2 = Variable(test1), Variable(test2)
-    #         output = net.forward(test1, test2).data.cpu().numpy()
-    #         pred = np.argmax(output)
-    #         if pred == 0:
-    #             right += 1
-    #         else:
-    #             error += 1
-    #
-    #     return
-    #
-    #     print('*' * 70)
-    #     print('epoch: %d, batch: [%d]\tTest set\tcorrect:\t%d\terror:\t%d\taccuracy:\t%f' % (
-    #         epoch, total_batch_id, right, error, right * 1.0 / (right + error)))
-    #     print('*' * 70)
-    #     queue.append(right * 1.0 / (right + error))
+    def test_simple(self, args, net, data_loader):
+        raise Exception('test_simple not done')
+        # net.eval()
+        #
+        # tests_right, tests_error = 0, 0
+        #
+        # fn = 0
+        # fp = 0
+        #
+        # for label, (test1, test2) in enumerate(data_loader, 1):
+        #     if args.cuda:
+        #         test1, test2 = test1.cuda(), test2.cuda()
+        #     test1, test2 = Variable(test1), Variable(test2)
+        #     output = net.forward(test1, test2).data.cpu().numpy()
+        #
+        #     pred = np.rint(output)
+        #
+        #     if pred == 0:
+        #         tests_right += 1
+        #     else:
+        #         tests_error += 1
+        #
+        # test_acc = tests_right * 1.0 / (tests_right + tests_error)
+        # self.logger.info('$' * 70)
+        # self.logger.info(
+        #     'TEST:\tTest set\tcorrect:\t%d\terror:\t%d\ttest_acc:%f\t' % (tests_right, tests_error, test_acc))
+        # self.logger.info('$' * 70)
 
-    def load_model(self, args, net, best_model, logger):
+    def test_fewshot(self, args, net, data_loader):
+        net.eval()
+
+        tests_right, tests_error = 0, 0
+
+        for _, (test1, test2) in enumerate(data_loader, 1):
+            if args.cuda:
+                test1, test2 = test1.cuda(), test2.cuda()
+            test1, test2 = Variable(test1), Variable(test2)
+            output = net.forward(test1, test2).data.cpu().numpy()
+            pred = np.argmax(output)
+            if pred == 0:
+                tests_right += 1
+            else:
+                tests_error += 1
+
+        test_acc = tests_right * 1.0 / (tests_right + tests_error)
+        self.logger.info('$' * 70)
+        self.logger.info(
+            'TEST:\tTest set\tcorrect:\t%d\terror:\t%d\ttest_acc:%f\t' % (tests_right, tests_error, test_acc))
+        self.logger.info('$' * 70)
+
+        return tests_right, tests_error, test_acc
+
+    def load_model(self, args, net, best_model):
         checkpoint = torch.load(os.path.join(args.save_path, best_model))
-        logger.info('Loading model %s from epoch [%d]' % (best_model, checkpoint['epoch']))
+        self.logger.info('Loading model %s from epoch [%d]' % (best_model, checkpoint['epoch']))
         net.load_state_dict(checkpoint['model_state_dict'])
         return net
 

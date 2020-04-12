@@ -56,8 +56,8 @@ def main():
 
     if args.dataset_name == 'cub':
         trainSet = CUBTrain(args, transform=data_transforms)
-        valSet = CUBTest(args, transform=data_transforms, mode='val')
-        testSet = CUBTest(args, transform=data_transforms)
+        valSet = CUBTest_Fewshot(args, transform=data_transforms, mode='val')
+        testSet = CUBTest_Fewshot(args, transform=data_transforms)
     elif args.dataset_name == 'omniglot':
         trainSet = OmniglotTrain(args, transform=data_transforms)
         # valSet = CUBTest(args, transform=data_transforms, mode='val')
@@ -84,7 +84,7 @@ def main():
 
     tm_net = top_module(args=args)
 
-    model_methods = utils.ModelMethods(args)
+    model_methods = utils.ModelMethods(args, logger)
 
     print(model_methods.save_path)
 
@@ -102,35 +102,17 @@ def main():
         experiment = Experiment(api_key="y7W3nBB2KpTXelJAzRFwK0mqn",
                                 project_name="hotels", workspace="aarashfeizi")
         logger.info('Training')
-        tm_net, best_model = model_methods.train(tm_net, loss_fn, args, trainLoader, valLoader, logger)
+        tm_net, best_model = model_methods.train(tm_net, loss_fn, args, trainLoader, valLoader)
     else:  # test
         logger.info('Testing')
         best_model = args.model_name
 
     # testing
     logger.info(f"Loading {best_model} model...")
-    tm_net = model_methods.load_model(args, tm_net, best_model, logger)
+    tm_net = model_methods.load_model(args, tm_net, best_model)
 
-    tm_net.eval()
+    model_methods.test_fewshot(args, tm_net, testLoader)
 
-    tests_right, tests_error = 0, 0
-
-    for _, (test1, test2) in enumerate(testLoader, 1):
-        if args.cuda:
-            test1, test2 = test1.cuda(), test2.cuda()
-        test1, test2 = Variable(test1), Variable(test2)
-        output = tm_net.forward(test1, test2).data.cpu().numpy()
-        pred = np.argmax(output)
-        if pred == 0:
-            tests_right += 1
-        else:
-            tests_error += 1
-
-    test_acc = tests_right * 1.0 / (tests_right + tests_error)
-    logger.info('$' * 70)
-    logger.info(
-        'TEST:\tTest set\tcorrect:\t%d\terror:\t%d\ttest_acc:%f\t' % (tests_right, tests_error, test_acc))
-    logger.info('$' * 70)
 
     #  learning_rate = learning_rate * 0.95
 
