@@ -231,9 +231,9 @@ class ModelMethods:
                         net.eval()
 
                         if args.eval_mode == 'fewshot':
-                            val_rgt, val_err, val_acc = self.test_fewshot(args, net, valLoader, val=True)
+                            val_rgt, val_err, val_acc = self.test_fewshot(args, net, valLoader, loss_fn, val=True)
                         elif args.eval_mode == 'simple':
-                            val_rgt, val_err, val_acc = self.test_simple(args, net, valLoader, val=True)
+                            val_rgt, val_err, val_acc = self.test_simple(args, net, valLoader, loss_fn, val=True)
                         else:
                             raise Exception('Unsupporeted eval mode')
                         # right, error = 0, 0
