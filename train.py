@@ -1,8 +1,7 @@
 import logging
 import sys
-from comet_ml import Experiment
 
-from torch.autograd import Variable
+from comet_ml import Experiment
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
@@ -112,7 +111,6 @@ def main():
     tm_net = model_methods.load_model(args, tm_net, best_model)
 
     model_methods.test_fewshot(args, tm_net, testLoader)
-
 
     #  learning_rate = learning_rate * 0.95
 

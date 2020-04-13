@@ -6,6 +6,7 @@ from collections import deque
 
 import numpy as np
 import torch
+from sklearn.metrics import confusion_matrix
 from torch.autograd import Variable
 from torchvision.transforms import transforms
 from tqdm import tqdm
@@ -102,6 +103,7 @@ def get_args():
     parser.add_argument('-a', '--aug', default=False, action='store_true')
     parser.add_argument('-r', '--rotate', default=0.0, type=float)
     parser.add_argument('-mn', '--model_name', default='')
+    parser.add_argument('-ev', '--eval_mode', default='fewshot', choices=['fewshot', 'simple'])
     parser.add_argument('-fe', '--feat_extractor', default='resnet18', choices=['resnet18', 'resnet50', 'resnet101'])
     parser.add_argument('-sg', '--sigmoid', default=False, action='store_true')
     parser.add_argument('-fr', '--freeze_ext', default=False, action='store_true')
@@ -227,36 +229,43 @@ class ModelMethods:
 
                     if total_batch_id % args.test_freq == 0:
                         net.eval()
-                        right, error = 0, 0
-                        val_label = np.zeros(shape=args.way, dtype=np.float32)
-                        val_label[0] = 1
-                        val_label = torch.from_numpy(val_label).reshape((args.way, 1))
 
-                        if args.cuda:
-                            val_label = Variable(val_label.cuda())
+                        if args.eval_mode == 'fewshot':
+                            val_rgt, val_err, val_acc = self.test_fewshot(args, net, valLoader, val=True)
+                        elif args.eval_mode == 'simple':
+                            val_rgt, val_err, val_acc = self.test_simple(args, net, valLoader, val=True)
                         else:
-                            val_label = Variable(val_label)
-
-                        for _, (test1, test2) in enumerate(valLoader, 1):
-                            if args.cuda:
-                                test1, test2 = test1.cuda(), test2.cuda()
-                            test1, test2 = Variable(test1), Variable(test2)
-                            output = net.forward(test1, test2)
-                            val_loss = loss_fn(output, val_label)
-                            output = output.data.cpu().numpy()
-                            pred = np.argmax(output)
-                            if pred == 0:
-                                right += 1
-                            else:
-                                error += 1
-
-                        val_acc = right * 1.0 / (right + error)
-                        self.logger.info('*' * 70)
-
-                        self.logger.info(
-                            'epoch: %d, batch: [%d]\tVal set\tcorrect:\t%d\terror:\t%d\tval_acc:%f\tval_loss:\t%f' % (
-                                epoch, batch_id, right, error, val_acc, val_loss))
-                        self.logger.info('*' * 70)
+                            raise Exception('Unsupporeted eval mode')
+                        # right, error = 0, 0
+                        # val_label = np.zeros(shape=args.way, dtype=np.float32)
+                        # val_label[0] = 1
+                        # val_label = torch.from_numpy(val_label).reshape((args.way, 1))
+                        #
+                        # if args.cuda:
+                        #     val_label = Variable(val_label.cuda())
+                        # else:
+                        #     val_label = Variable(val_label)
+                        #
+                        # for _, (test1, test2) in enumerate(valLoader, 1):
+                        #     if args.cuda:
+                        #         test1, test2 = test1.cuda(), test2.cuda()
+                        #     test1, test2 = Variable(test1), Variable(test2)
+                        #     output = net.forward(test1, test2)
+                        #     val_loss = loss_fn(output, val_label)
+                        #     output = output.data.cpu().numpy()
+                        #     pred = np.argmax(output)
+                        #     if pred == 0:
+                        #         right += 1
+                        #     else:
+                        #         error += 1
+                        #
+                        # val_acc = right * 1.0 / (right + error)
+                        # self.logger.info('*' * 70)
+                        #
+                        # self.logger.info(
+                        #     'epoch: %d, batch: [%d]\tVal set\tcorrect:\t%d\terror:\t%d\tval_acc:%f\tval_loss:\t%f' % (
+                        #         epoch, batch_id, right, error, val_acc, val_loss))
+                        # self.logger.info('*' * 70)
 
                         if val_acc > max_val_acc:
                             self.logger.info(
@@ -267,7 +276,7 @@ class ModelMethods:
                         else:
                             self.logger.info('Not saving, best val [%f], current was [%f]' % (max_val_acc, val_acc))
 
-                        queue.append(right * 1.0 / (right + error))
+                        queue.append(val_rgt * 1.0 / (val_rgt + val_err))
                     train_losses.append(train_loss)
 
                     t.update()
@@ -284,44 +293,68 @@ class ModelMethods:
 
         return net, best_model
 
-    def test_simple(self, args, net, data_loader):
-        raise Exception('test_simple not done')
-        # net.eval()
-        #
-        # tests_right, tests_error = 0, 0
-        #
-        # fn = 0
-        # fp = 0
-        #
-        # for label, (test1, test2) in enumerate(data_loader, 1):
-        #     if args.cuda:
-        #         test1, test2 = test1.cuda(), test2.cuda()
-        #     test1, test2 = Variable(test1), Variable(test2)
-        #     output = net.forward(test1, test2).data.cpu().numpy()
-        #
-        #     pred = np.rint(output)
-        #
-        #     if pred == 0:
-        #         tests_right += 1
-        #     else:
-        #         tests_error += 1
-        #
-        # test_acc = tests_right * 1.0 / (tests_right + tests_error)
-        # self.logger.info('$' * 70)
-        # self.logger.info(
-        #     'TEST:\tTest set\tcorrect:\t%d\terror:\t%d\ttest_acc:%f\t' % (tests_right, tests_error, test_acc))
-        # self.logger.info('$' * 70)
-
-    def test_fewshot(self, args, net, data_loader):
+    def test_simple(self, args, net, data_loader, loss_fn, val=False):
         net.eval()
 
+        if val:
+            prompt_text = 'VAL SIMPLE:\tVal set\tcorrect:\t%d\terror:\t%d\tval_loss:%f\tval_acc:%f\tval_rec:%f\tval_negacc:%f\t'
+        else:
+            prompt_text = 'TEST SIMPLE:\tTest set\tcorrect:\t%d\terror:\t%d\ttest_loss:%f\ttest_acc:%f\ttest_rec:%f\ttest_negacc:%f\t'
+
         tests_right, tests_error = 0, 0
+
+        fn = 0
+        fp = 0
+        tn = 0
+        tp = 0
+
+        for label, (test1, test2) in enumerate(data_loader, 1):
+            if args.cuda:
+                test1, test2 = test1.cuda(), test2.cuda()
+            test1, test2 = Variable(test1), Variable(test2)
+
+            output = net.forward(test1, test2)
+            test_loss = loss_fn(output, label)
+            output = output.data.cpu().numpy()
+            pred = np.rint(output)
+
+            tn_t, fp_t, fn_t, tp_t = confusion_matrix(label, pred).ravel()
+
+            fn += fn_t
+            tn += tn_t
+            fp += fp_t
+            tp += tp_t
+
+        test_acc = ((tp + tn) * 1.0) / (tp + tn + fn + fp)
+        test_recall = (tp * 0.1) / (tp + fn)
+        test_negacc = (tn * 0.1) / (tn + fp)
+        self.logger.info('$' * 70)
+        self.logger.info(prompt_text % (tests_right, tests_error, test_loss, test_acc, test_recall, test_negacc))
+        self.logger.info('$' * 70)
+
+        return tests_right, tests_error, test_acc
+
+    def test_fewshot(self, args, net, data_loader, loss_fn, val=False):
+        net.eval()
+
+        if val:
+            prompt_text = 'VAL FEW SHOT:\tVal set\tcorrect:\t%d\terror:\t%d\tval_acc:%f\tval_loss:%f\t'
+        else:
+            prompt_text = 'TEST FEW SHOT:\tTest set\tcorrect:\t%d\terror:\t%d\ttest_acc:%f\ttest_loss:%f\t'
+
+        tests_right, tests_error = 0, 0
+
+        test_label = np.zeros(shape=args.way, dtype=np.float32)
+        test_label[0] = 1
+        test_label = torch.from_numpy(test_label).reshape((args.way, 1))
 
         for _, (test1, test2) in enumerate(data_loader, 1):
             if args.cuda:
                 test1, test2 = test1.cuda(), test2.cuda()
             test1, test2 = Variable(test1), Variable(test2)
-            output = net.forward(test1, test2).data.cpu().numpy()
+            output = net.forward(test1, test2)
+            test_loss = loss_fn(output, test_label)
+            output = output.data.cpu().numpy()
             pred = np.argmax(output)
             if pred == 0:
                 tests_right += 1
@@ -330,8 +363,7 @@ class ModelMethods:
 
         test_acc = tests_right * 1.0 / (tests_right + tests_error)
         self.logger.info('$' * 70)
-        self.logger.info(
-            'TEST:\tTest set\tcorrect:\t%d\terror:\t%d\ttest_acc:%f\t' % (tests_right, tests_error, test_acc))
+        self.logger.info(prompt_text % (tests_right, tests_error, test_acc, test_loss))
         self.logger.info('$' * 70)
 
         return tests_right, tests_error, test_acc
