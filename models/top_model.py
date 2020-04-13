@@ -9,23 +9,23 @@ class TopModel(nn.Module):
         self.ft_net = ft_net
         self.sm_net = sm_net
 
-        print('FEATURE NET')
-        print(self.ft_net)
-        print('SIAMESE NET')
-        print(self.sm_net)
+        # print('FEATURE NET')
+        # print(self.ft_net)
+        # print('SIAMESE NET')
+        # print(self.sm_net)
 
 
     def forward(self, x1, x2):
-        print('model input:', x1[-1].size())
+        # print('model input:', x1[-1].size())
 
         x1_f, x1_l = self.ft_net(x1, is_feat=True)
         x2_f, x2_l = self.ft_net(x2, is_feat=True)
 
-        print('features:', x2_f[-1].size())
+        # print('features:', x2_f[-1].size())
 
         output = self.sm_net(x1_f[-1], x2_f[-1])
 
-        print('output:', output.size())
+        # print('output:', output.size())
 
         return output
 

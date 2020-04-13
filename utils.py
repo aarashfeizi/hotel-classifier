@@ -65,8 +65,8 @@ class Metric:
 
     def update_acc(self, output, label):
         pred = (output >= 0)
-        print(output.size())
-        print(label.size())
+        # print(output.size())
+        # print(label.size())
         batch_rights = sum(label.type(torch.int64) == pred.type(torch.int64)).cpu().numpy()[0]
 
         self.rights += batch_rights
@@ -199,7 +199,7 @@ class ModelMethods:
             with tqdm(total=len(trainLoader), desc=f'Epoch {epoch + 1}/{args.epochs}') as t:
                 for batch_id, (img1, img2, label) in enumerate(trainLoader, 1):
 
-                    print('input: ', img1.size())
+                    # print('input: ', img1.size())
 
                     if args.cuda:
                         img1, img2, label = Variable(img1.cuda()), Variable(img2.cuda()), Variable(label.cuda())
