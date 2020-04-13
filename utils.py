@@ -348,6 +348,11 @@ class ModelMethods:
         test_label[0] = 1
         test_label = torch.from_numpy(test_label).reshape((args.way, 1))
 
+        if args.cuda:
+            test_label = Variable(test_label.cuda())
+        else:
+            test_label = Variable(test_label)
+
         for _, (test1, test2) in enumerate(data_loader, 1):
             if args.cuda:
                 test1, test2 = test1.cuda(), test2.cuda()
