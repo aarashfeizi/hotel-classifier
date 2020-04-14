@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn import Parameter
 from torchvision.models import ResNet as tResNet
 
 from utils import load_state_dict_from_url
@@ -123,6 +124,11 @@ class Bottleneck(nn.Module):
 
 class ResNet(tResNet):
 
+    def __init__(self, block, layers, num_classes):
+        super(ResNet, self).__init__(block, layers)
+        self.new_fc = nn.Linear(512, num_classes)
+
+
     def forward(self, x, is_feat=False):
 
         x = self.conv1(x)
@@ -140,34 +146,44 @@ class ResNet(tResNet):
         f3 = x
         x = self.layer4(x)
         feat = x
-
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
-        x = self.fc(x)
+        x = self.new_fc(x)
 
         if is_feat:
             return [f0, f1, f2, f3, feat], x
         else:
             return x
 
+    def load_my_state_dict(self, state_dict):
 
-def _resnet(arch, block, layers, pretrained, progress, **kwargs):
-    model = ResNet(block, layers, **kwargs)
+        own_state = self.state_dict()
+        for name, param in state_dict.items():
+            if name not in own_state:
+                continue
+            if isinstance(param, Parameter):
+                # backwards compatibility for serialized parameters
+                param = param.data
+            own_state[name].copy_(param)
+
+
+def _resnet(arch, block, layers, pretrained, progress, num_classes, **kwargs):
+    model = ResNet(block, layers, num_classes, **kwargs)
     if pretrained:
         state_dict = torch.load('models/pretrained_resnet18.pt')['model_state_dict']
-        model.load_state_dict(state_dict)
+        model.load_my_state_dict(state_dict)
         print('pretrained loaded!')
     return model
 
 
-def resnet18(pretrained=False, progress=True, **kwargs):
+def resnet18(pretrained=False, progress=True, num_classes=-1, **kwargs):
     r"""ResNet-18 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
+    return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress, num_classes,
                    **kwargs)
 
 

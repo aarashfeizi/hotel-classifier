@@ -212,7 +212,7 @@ class ModelMethods:
                     output = net.forward(img1, img2)
                     metric.update_acc(output, label)
                     loss = loss_fn(output, label)
-                    print('loss: ', loss.item())
+                    # print('loss: ', loss.item())
                     train_loss += loss.item()
                     loss.backward()
 
@@ -227,7 +227,7 @@ class ModelMethods:
                     #     metric.reset_acc()
                     #     time_start = time.time()
 
-                    if total_batch_id % args.test_freq == 0:
+                    if valLoader is not None and total_batch_id % args.test_freq == 0:
                         net.eval()
 
                         if args.eval_mode == 'fewshot':
@@ -236,36 +236,6 @@ class ModelMethods:
                             val_rgt, val_err, val_acc = self.test_simple(args, net, valLoader, loss_fn, val=True)
                         else:
                             raise Exception('Unsupporeted eval mode')
-                        # right, error = 0, 0
-                        # val_label = np.zeros(shape=args.way, dtype=np.float32)
-                        # val_label[0] = 1
-                        # val_label = torch.from_numpy(val_label).reshape((args.way, 1))
-                        #
-                        # if args.cuda:
-                        #     val_label = Variable(val_label.cuda())
-                        # else:
-                        #     val_label = Variable(val_label)
-                        #
-                        # for _, (test1, test2) in enumerate(valLoader, 1):
-                        #     if args.cuda:
-                        #         test1, test2 = test1.cuda(), test2.cuda()
-                        #     test1, test2 = Variable(test1), Variable(test2)
-                        #     output = net.forward(test1, test2)
-                        #     val_loss = loss_fn(output, val_label)
-                        #     output = output.data.cpu().numpy()
-                        #     pred = np.argmax(output)
-                        #     if pred == 0:
-                        #         right += 1
-                        #     else:
-                        #         error += 1
-                        #
-                        # val_acc = right * 1.0 / (right + error)
-                        # self.logger.info('*' * 70)
-                        #
-                        # self.logger.info(
-                        #     'epoch: %d, batch: [%d]\tVal set\tcorrect:\t%d\terror:\t%d\tval_acc:%f\tval_loss:\t%f' % (
-                        #         epoch, batch_id, right, error, val_acc, val_loss))
-                        # self.logger.info('*' * 70)
 
                         if val_acc > max_val_acc:
                             self.logger.info(

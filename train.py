@@ -68,6 +68,7 @@ def main():
     else:
         print('Fuck: ', args.dataset_name)
 
+
     print('way:', args.way)
 
     testLoader = DataLoader(testSet, batch_size=args.way, shuffle=False, num_workers=args.workers)
@@ -81,9 +82,33 @@ def main():
 
     loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean')
 
-    tm_net = top_module(args=args)
+
+    #train resnet
+
+    num_classes = trainSet.num_classes
+
+    print('num_classes', num_classes)
+
+
+    feat_ext = resnet18(pretrained=True, num_classes=num_classes)
+
+    if len(args.gpu_ids.split(",")) > 1:
+        feat_ext = torch.nn.DataParallel(feat_ext)
+
+    if args.cuda:
+        feat_ext.cuda()
+
+    #todo
+
 
     model_methods = utils.ModelMethods(args, logger)
+
+    logger.info('Training')
+    tm_net, best_model = model_methods.train(feat_ext, loss_fn, args, trainLoader, None)
+
+
+    # tm_net = top_module(args=args)
+
 
     print(model_methods.save_path)
 
@@ -98,8 +123,6 @@ def main():
         tm_net.cuda()
 
     if args.model_name == '':  # train
-        experiment = Experiment(api_key="y7W3nBB2KpTXelJAzRFwK0mqn",
-                                project_name="hotels", workspace="aarashfeizi")
         logger.info('Training')
         tm_net, best_model = model_methods.train(tm_net, loss_fn, args, trainLoader, valLoader)
     else:  # test
