@@ -101,13 +101,13 @@ def main():
 
     model_methods = utils.ModelMethods(args, logger, 'res')
 
-    logger.info('Training')
-    feat_net, best_res_model = model_methods.train_classify(feat_ext, loss_fn, args, train_classify_loader, None)
-
-    print('loading trained feature model')
-    feat_net = model_methods.load_model(args, feat_net, best_res_model)
-
-    print('loading trained feature model done!')
+    logger.info('Training Res')
+    feat_net = model_methods.train_classify(feat_ext, loss_fn, args, train_classify_loader, None)
+    #
+    # print('loading trained feature model')
+    # feat_net = model_methods.load_model(args, feat_net, best_res_model)
+    #
+    # print('loading trained feature model done!')
 
     model_methods_top = utils.ModelMethods(args, logger, 'top')
     tm_net = top_module(args=args, trained_feat_net=feat_net)
@@ -124,6 +124,7 @@ def main():
     if args.cuda:
         tm_net.cuda()
 
+    logger.info('Training Top')
     if args.model_name == '':  # train
         logger.info('Training')
         tm_net, best_model_top = model_methods_top.train_fewshot(tm_net, loss_fn, args, trainLoader, valLoader)
