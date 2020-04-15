@@ -89,20 +89,20 @@ def main():
 
     num_classes = train_classification_dataset.num_classes
     #
-    print('num_classes', num_classes)
-
-    feat_ext = resnet18(pretrained=True, num_classes=num_classes)
-
-    if len(args.gpu_ids.split(",")) > 1:
-        feat_ext = torch.nn.DataParallel(feat_ext)
-
-    if args.cuda:
-        feat_ext.cuda()
-
-    model_methods = utils.ModelMethods(args, logger, 'res')
-
-    logger.info('Training Res')
-    feat_net = model_methods.train_classify(feat_ext, loss_fn, args, train_classify_loader, None)
+    # print('num_classes', num_classes)
+    #
+    # feat_ext = resnet18(pretrained=True, num_classes=num_classes)
+    #
+    # if len(args.gpu_ids.split(",")) > 1:
+    #     feat_ext = torch.nn.DataParallel(feat_ext)
+    #
+    # if args.cuda:
+    #     feat_ext.cuda()
+    #
+    # model_methods = utils.ModelMethods(args, logger, 'res')
+    #
+    # logger.info('Training Res')
+    # feat_net = model_methods.train_classify(feat_ext, loss_fn, args, train_classify_loader, None)
     #
     # ################################
     #
@@ -112,8 +112,8 @@ def main():
     # print('loading trained feature model done!')
 
     model_methods_top = utils.ModelMethods(args, logger, 'top')
-    tm_net = top_module(args=args, trained_feat_net=feat_net, num_classes=num_classes)
-    # tm_net = top_module(args=args, num_classes=num_classes)
+    # tm_net = top_module(args=args, trained_feat_net=feat_net, num_classes=num_classes)
+    tm_net = top_module(args=args, num_classes=num_classes)
 
     print(model_methods_top.save_path)
 
