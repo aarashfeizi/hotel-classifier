@@ -29,7 +29,7 @@ class TopModel(nn.Module):
         return output
 
 
-def top_module(args, trained_feat_net=None, trained_sm_net=None):
+def top_module(args, trained_feat_net=None, trained_sm_net=None, num_classes=1):
     if trained_sm_net is None:
         sm_net = LiSiamese(args)
     else:
@@ -40,8 +40,8 @@ def top_module(args, trained_feat_net=None, trained_sm_net=None):
         'resnet50': resnet50,
         'resnet101': resnet101,
     }
-    if trained_sm_net is None:
-        ft_net = model_dict[args.feat_extractor](pretrained=True)
+    if trained_feat_net is None:
+        ft_net = model_dict[args.feat_extractor](pretrained=True, num_classes=num_classes)
     else:
         print('used trained model')
         ft_net = trained_feat_net

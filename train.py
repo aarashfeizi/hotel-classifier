@@ -88,7 +88,7 @@ def main():
     # train resnet
 
     num_classes = train_classification_dataset.num_classes
-
+    #
     print('num_classes', num_classes)
 
     feat_ext = resnet18(pretrained=True, num_classes=num_classes)
@@ -112,8 +112,8 @@ def main():
     # print('loading trained feature model done!')
 
     model_methods_top = utils.ModelMethods(args, logger, 'top')
-    tm_net = top_module(args=args, trained_feat_net=feat_net)
-    # tm_net = top_module(args=args)
+    tm_net = top_module(args=args, trained_feat_net=feat_net, num_classes=num_classes)
+    # tm_net = top_module(args=args, num_classes=num_classes)
 
     print(model_methods_top.save_path)
 
