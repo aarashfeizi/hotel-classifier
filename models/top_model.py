@@ -41,10 +41,10 @@ def top_module(args, trained_feat_net=None, trained_sm_net=None):
         'resnet101': resnet101,
     }
     if trained_sm_net is None:
+        ft_net = model_dict[args.feat_extractor](pretrained=True)
+    else:
         print('used trained model')
         ft_net = trained_feat_net
-    else:
-        ft_net = model_dict[args.feat_extractor](pretrained=True)
 
     if not args.freeze_ext:
         for param in ft_net.parameters():

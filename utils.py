@@ -194,7 +194,7 @@ class ModelMethods:
             train_loss = 0
             metric.reset_acc()
 
-            with tqdm(total=len(trainLoader), desc=f'Epoch {epoch + 1}/{args.epochs}') as t:
+            with tqdm(total=len(trainLoader), desc=f'Epoch {epoch + 1}/{epochs}') as t:
                 for batch_id, (img, label) in enumerate(trainLoader, 1):
 
                     # print('input: ', img1.size())

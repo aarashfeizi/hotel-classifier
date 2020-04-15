@@ -11,7 +11,7 @@ class LiSiamese(nn.Module):
 
         # self.layer = nn.Sequential(nn.Linear(25088, 512))
 
-        self.out = nn.Sequential(nn.Linear(25088, 1), nn.Sigmoid())
+        self.out = nn.Sequential(nn.Linear(512, 1), nn.Sigmoid())
 
 
     def forward_one(self, x):

@@ -104,6 +104,8 @@ def main():
     logger.info('Training Res')
     feat_net = model_methods.train_classify(feat_ext, loss_fn, args, train_classify_loader, None)
     #
+    # ################################
+    #
     # print('loading trained feature model')
     # feat_net = model_methods.load_model(args, feat_net, best_res_model)
     #
@@ -111,6 +113,7 @@ def main():
 
     model_methods_top = utils.ModelMethods(args, logger, 'top')
     tm_net = top_module(args=args, trained_feat_net=feat_net)
+    # tm_net = top_module(args=args)
 
     print(model_methods_top.save_path)
 

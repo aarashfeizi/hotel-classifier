@@ -145,8 +145,8 @@ class ResNet(tResNet):
         x = self.layer3(x)
         f3 = x
         x = self.layer4(x)
-        feat = x
         x = self.avgpool(x)
+        feat = x
         x = torch.flatten(x, 1)
         x = self.new_fc(x)
         # print('is_feat', is_feat)
