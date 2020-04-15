@@ -1,7 +1,6 @@
 import logging
 import sys
 
-from comet_ml import Experiment
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
@@ -53,8 +52,10 @@ def main():
     testSet = None
     valSet = None
 
+    train_classification_dataset = CUBClassification(args, transform=data_transforms, mode='train')
+
     if args.dataset_name == 'cub':
-        trainSet = CUBTrain(args, transform=data_transforms)
+        trainSet = CUBTrain_Top(args, transform=data_transforms)
         valSet = CUBTest_Fewshot(args, transform=data_transforms, mode='val')
         testSet = CUBTest_Fewshot(args, transform=data_transforms)
     elif args.dataset_name == 'omniglot':
@@ -68,8 +69,10 @@ def main():
     else:
         print('Fuck: ', args.dataset_name)
 
-
     print('way:', args.way)
+
+    train_classify_loader = DataLoader(train_classification_dataset, batch_size=args.batch_size, shuffle=False,
+                                       num_workers=args.workers)
 
     testLoader = DataLoader(testSet, batch_size=args.way, shuffle=False, num_workers=args.workers)
 
@@ -82,13 +85,11 @@ def main():
 
     loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean')
 
+    # train resnet
 
-    #train resnet
-
-    num_classes = trainSet.num_classes
+    num_classes = train_classification_dataset.num_classes
 
     print('num_classes', num_classes)
-
 
     feat_ext = resnet18(pretrained=True, num_classes=num_classes)
 
@@ -98,19 +99,20 @@ def main():
     if args.cuda:
         feat_ext.cuda()
 
-    #todo
-
-
-    model_methods = utils.ModelMethods(args, logger)
+    model_methods = utils.ModelMethods(args, logger, 'res')
 
     logger.info('Training')
-    tm_net, best_model = model_methods.train(feat_ext, loss_fn, args, trainLoader, None)
+    feat_net, best_res_model = model_methods.train_classify(feat_ext, loss_fn, args, train_classify_loader, None)
 
+    print('loading trained feature model')
+    feat_net = model_methods.load_model(args, feat_net, best_res_model)
 
-    # tm_net = top_module(args=args)
+    print('loading trained feature model done!')
 
+    model_methods_top = utils.ModelMethods(args, logger, 'top')
+    tm_net = top_module(args=args, trained_feat_net=feat_net)
 
-    print(model_methods.save_path)
+    print(model_methods_top.save_path)
 
     # multi gpu
     if len(args.gpu_ids.split(",")) > 1:
@@ -124,16 +126,16 @@ def main():
 
     if args.model_name == '':  # train
         logger.info('Training')
-        tm_net, best_model = model_methods.train(tm_net, loss_fn, args, trainLoader, valLoader)
+        tm_net, best_model_top = model_methods_top.train_fewshot(tm_net, loss_fn, args, trainLoader, valLoader)
     else:  # test
         logger.info('Testing')
-        best_model = args.model_name
+        best_model_top = args.model_name
 
     # testing
-    logger.info(f"Loading {best_model} model...")
-    tm_net = model_methods.load_model(args, tm_net, best_model)
+    logger.info(f"Loading {best_model_top} model...")
+    tm_net = model_methods_top.load_model(args, tm_net, best_model_top)
 
-    model_methods.test_fewshot(args, tm_net, testLoader)
+    model_methods_top.test_fewshot(args, tm_net, testLoader)
 
     #  learning_rate = learning_rate * 0.95
 

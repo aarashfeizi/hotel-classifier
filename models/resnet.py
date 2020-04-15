@@ -149,7 +149,8 @@ class ResNet(tResNet):
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.new_fc(x)
-
+        # print('is_feat', is_feat)
+        # print('type is_feat', type(is_feat))
         if is_feat:
             return [f0, f1, f2, f3, feat], x
         else:

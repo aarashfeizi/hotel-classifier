@@ -137,10 +137,11 @@ def get_args():
 
 class ModelMethods:
 
-    def __init__(self, args, logger):
+    def __init__(self, args, logger, model='top'):  # res or top
         id_str = str(time.time())
         id_str = '-time_' + id_str[:id_str.find('.')]
 
+        self.model = model
         self.model_name = self._parse_args(args)
         self.save_path = os.path.join(args.save_path, self.model_name + id_str)
         self.logger = logger
@@ -152,7 +153,7 @@ class ModelMethods:
             print(f'Save directory {self.save_path} already exists')  # almost impossible
 
     def _parse_args(self, args):
-        name = 'model'
+        name = 'model-' + self.model
 
         important_args = ['dataset_name',
                           'aug',
@@ -169,7 +170,61 @@ class ModelMethods:
 
         return name
 
-    def train(self, net, loss_fn, args, trainLoader, valLoader):
+    def train_classify(self, net, loss_fn, args, trainLoader, valLoader):
+        net.train()
+
+        opt = torch.optim.Adam(net.parameters(), lr=args.lr)
+        opt.zero_grad()
+
+        train_losses = []
+        time_start = time.time()
+        queue = deque(maxlen=20)
+
+        # print('steps:', args.max_steps)
+
+        # epochs = int(np.ceil(args.max_steps / len(trainLoader)))
+        epochs = 1
+        print('epochs: ', epochs)
+
+        total_batch_id = 0
+        metric = Metric()
+
+        for epoch in range(epochs):
+
+            train_loss = 0
+            metric.reset_acc()
+
+            with tqdm(total=len(trainLoader), desc=f'Epoch {epoch + 1}/{args.epochs}') as t:
+                for batch_id, (img, label) in enumerate(trainLoader, 1):
+
+                    # print('input: ', img1.size())
+
+                    if args.cuda:
+                        img, label = Variable(img.cuda()), Variable(label.cuda())
+                    else:
+                        img, label = Variable(img), Variable(label)
+
+                    net.train()
+                    opt.zero_grad()
+
+                    output = net.forward(img)
+                    metric.update_acc(output, label)
+                    loss = loss_fn(output, label)
+                    # print('loss: ', loss.item())
+                    train_loss += loss.item()
+                    loss.backward()
+
+                    opt.step()
+                    total_batch_id += 1
+                    t.set_postfix(loss=f'{train_loss / batch_id:.4f}', train_acc=f'{metric.get_acc():.4f}')
+
+                    train_losses.append(train_loss)
+
+                    t.update()
+
+        return net
+
+    def train_fewshot(self, net, loss_fn, args, trainLoader, valLoader):
         net.train()
 
         opt = torch.optim.Adam(net.parameters(), lr=args.lr)
