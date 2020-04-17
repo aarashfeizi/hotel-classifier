@@ -27,4 +27,5 @@ python3 train.py -cuda \
         -ep 100 \
         -lr 0.00006 \
         -sg \
+        -fr
 

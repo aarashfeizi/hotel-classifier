@@ -40,14 +40,21 @@ def top_module(args, trained_feat_net=None, trained_sm_net=None, num_classes=1):
         'resnet50': resnet50,
         'resnet101': resnet101,
     }
+
     if trained_feat_net is None:
+        print('Using pretrained model')
         ft_net = model_dict[args.feat_extractor](pretrained=True, num_classes=num_classes)
     else:
-        print('used trained model')
+        print('Using recently trained model')
         ft_net = trained_feat_net
 
     if not args.freeze_ext:
+        print("Unfreezing Resnet")
         for param in ft_net.parameters():
             param.requires_grad = True
+    else:
+        print("Freezing Resnet")
+        for param in ft_net.parameters():
+            param.requires_grad = False
 
     return TopModel(ft_net=ft_net, sm_net=sm_net)
