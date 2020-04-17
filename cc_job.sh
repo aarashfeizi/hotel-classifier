@@ -17,7 +17,7 @@ python3 train.py -cuda \
         -dsn cub \
         -dsp ../../dataset/ \
         -sdp images \
-        -sp models \
+        -sp savedmodels \
         -gpu 0 \
         -wr 10 \
         -bs 8 \

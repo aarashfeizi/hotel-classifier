@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from sklearn.metrics import confusion_matrix
 from torch.autograd import Variable
+from torch.utils.tensorboard import SummaryWriter
 from torchvision.transforms import transforms
 from tqdm import tqdm
 
@@ -100,6 +101,7 @@ def get_args():
     parser.add_argument('-tsp', '--test_path', default='./omniglot/python/images_evaluation')
     parser.add_argument('-is', '--image_size', default=0, type=int, help="Image Size")
     parser.add_argument('-sp', '--save_path', default='models/', help="path to store model")
+    parser.add_argument('-lp', '--log_path', default='logs/', help="path to log")
     parser.add_argument('-a', '--aug', default=False, action='store_true')
     parser.add_argument('-r', '--rotate', default=0.0, type=float)
     parser.add_argument('-mn', '--model_name', default='')
@@ -145,13 +147,17 @@ class ModelMethods:
         self.model = model
         self.model_name = self._parse_args(args)
         self.save_path = os.path.join(args.save_path, self.model_name + id_str)
+        self.tensorboard_path = os.path.join(args.log_path, 'tensorboard-' + self.model_name + id_str)
         self.logger = logger
+        self.writer = SummaryWriter(self.tensorboard_path)
+
+        self.logger.info("** Tensorboard path: " + self.tensorboard_path)
 
         if not os.path.exists(self.save_path):
             os.mkdir(self.save_path)
-            print(f'Created save directory {self.save_path}')
+            self.logger.info(f'Created save and log directories {self.save_path} and {self.tensorboard_path}')
         else:
-            print(f'Save directory {self.save_path} already exists')  # almost impossible
+            self.logger.info(f'Save directory {self.save_path} already exists, but how?? {id_str}')  # almost impossible
 
     def _parse_args(self, args):
         name = 'model-' + self.model
@@ -185,7 +191,6 @@ class ModelMethods:
 
         # epochs = int(np.ceil(args.max_steps / len(trainLoader)))
         epochs = 1
-        print('epochs: ', epochs)
 
         total_batch_id = 0
         metric = Metric()
@@ -239,9 +244,7 @@ class ModelMethods:
 
         # epochs = int(np.ceil(args.max_steps / len(trainLoader)))
         epochs = args.epochs
-        print('epochs: ', epochs)
 
-        total_batch_id = 0
         metric = Metric()
 
         max_val_acc = 0
@@ -273,7 +276,6 @@ class ModelMethods:
                     loss.backward()
 
                     opt.step()
-                    total_batch_id += 1
                     t.set_postfix(loss=f'{train_loss / batch_id:.4f}', train_acc=f'{metric.get_acc():.4f}')
 
                     # if total_batch_id % args.log_freq == 0:
@@ -283,29 +285,36 @@ class ModelMethods:
                     #     metric.reset_acc()
                     #     time_start = time.time()
 
-                    if valLoader is not None and total_batch_id % args.test_freq == 0:
-                        net.eval()
-
-                        if args.eval_mode == 'fewshot':
-                            val_rgt, val_err, val_acc = self.test_fewshot(args, net, valLoader, loss_fn, val=True)
-                        elif args.eval_mode == 'simple':
-                            val_rgt, val_err, val_acc = self.test_simple(args, net, valLoader, loss_fn, val=True)
-                        else:
-                            raise Exception('Unsupporeted eval mode')
-
-                        if val_acc > max_val_acc:
-                            self.logger.info(
-                                'saving model... current val acc: [%f], previous val acc [%f]' % (val_acc, max_val_acc))
-                            best_model = self.save_model(args, net, total_batch_id, epoch, val_acc)
-                            max_val_acc = val_acc
-
-                        else:
-                            self.logger.info('Not saving, best val [%f], current was [%f]' % (max_val_acc, val_acc))
-
-                        queue.append(val_rgt * 1.0 / (val_rgt + val_err))
                     train_losses.append(train_loss)
 
                     t.update()
+
+                self.writer.add_scalar('Train/Loss', train_loss, epoch)
+                self.writer.add_scalar('Train/Acc', metric.get_acc(), epoch)
+                self.writer.flush()
+
+                if valLoader is not None and epoch % args.test_freq == 0:
+                    net.eval()
+
+                    if args.eval_mode == 'fewshot':
+                        val_rgt, val_err, val_acc = self.test_fewshot(args, net, valLoader, loss_fn, val=True,
+                                                                      epoch=epoch)
+                    elif args.eval_mode == 'simple':
+                        val_rgt, val_err, val_acc = self.test_simple(args, net, valLoader, loss_fn, val=True,
+                                                                     epoch=epoch)
+                    else:
+                        raise Exception('Unsupporeted eval mode')
+
+                    if val_acc > max_val_acc:
+                        self.logger.info(
+                            'saving model... current val acc: [%f], previous val acc [%f]' % (val_acc, max_val_acc))
+                        best_model = self.save_model(args, net, epoch, val_acc)
+                        max_val_acc = val_acc
+
+                    else:
+                        self.logger.info('Not saving, best val [%f], current was [%f]' % (max_val_acc, val_acc))
+
+                    queue.append(val_rgt * 1.0 / (val_rgt + val_err))
 
         with open('train_losses', 'wb') as f:
             pickle.dump(train_losses, f)
@@ -319,13 +328,15 @@ class ModelMethods:
 
         return net, best_model
 
-    def test_simple(self, args, net, data_loader, loss_fn, val=False):
+    def test_simple(self, args, net, data_loader, loss_fn, val=False, epoch=0):
         net.eval()
 
         if val:
             prompt_text = 'VAL SIMPLE:\tVal set\tcorrect:\t%d\terror:\t%d\tval_loss:%f\tval_acc:%f\tval_rec:%f\tval_negacc:%f\t'
+            prompt_text_tb = 'Val'
         else:
             prompt_text = 'TEST SIMPLE:\tTest set\tcorrect:\t%d\terror:\t%d\ttest_loss:%f\ttest_acc:%f\ttest_rec:%f\ttest_negacc:%f\t'
+            prompt_text_tb = 'Test'
 
         tests_right, tests_error = 0, 0
 
@@ -358,15 +369,21 @@ class ModelMethods:
         self.logger.info(prompt_text % (tests_right, tests_error, test_loss, test_acc, test_recall, test_negacc))
         self.logger.info('$' * 70)
 
+        self.writer.add_scalar(f'{prompt_text_tb}/Loss', test_loss, epoch)
+        self.writer.add_scalar(f'{prompt_text_tb}/Acc', test_acc, epoch)
+        self.writer.flush()
+
         return tests_right, tests_error, test_acc
 
-    def test_fewshot(self, args, net, data_loader, loss_fn, val=False):
+    def test_fewshot(self, args, net, data_loader, loss_fn, val=False, epoch=0):
         net.eval()
 
         if val:
             prompt_text = 'VAL FEW SHOT:\tVal set\tcorrect:\t%d\terror:\t%d\tval_acc:%f\tval_loss:%f\t'
+            prompt_text_tb = 'Val'
         else:
             prompt_text = 'TEST FEW SHOT:\tTest set\tcorrect:\t%d\terror:\t%d\ttest_acc:%f\ttest_loss:%f\t'
+            prompt_text_tb = 'Test'
 
         tests_right, tests_error = 0, 0
 
@@ -397,6 +414,10 @@ class ModelMethods:
         self.logger.info(prompt_text % (tests_right, tests_error, test_acc, test_loss))
         self.logger.info('$' * 70)
 
+        self.writer.add_scalar(f'{prompt_text_tb}/Loss', test_loss, epoch)
+        self.writer.add_scalar(f'{prompt_text_tb}/Acc', test_acc, epoch)
+        self.writer.flush()
+
         return tests_right, tests_error, test_acc
 
     def load_model(self, args, net, best_model):
@@ -405,9 +426,8 @@ class ModelMethods:
         net.load_state_dict(checkpoint['model_state_dict'])
         return net
 
-    def save_model(self, args, net, total_batch_id, epoch, val_acc):
-        best_model = 'model-inter-' + str(total_batch_id + 1) + '-epoch-' + str(
-            epoch + 1) + '-val-acc-' + str(val_acc) + '.pt'
+    def save_model(self, args, net, epoch, val_acc):
+        best_model = 'model-epoch-' + str(epoch + 1) + '-val-acc-' + str(val_acc) + '.pt'
         torch.save({'epoch': epoch, 'model_state_dict': net.state_dict()},
                    self.save_path + '/' + best_model)
         return best_model
