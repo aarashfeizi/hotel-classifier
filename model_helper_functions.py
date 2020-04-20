@@ -53,16 +53,21 @@ class ModelMethods:
 
         return name
 
-    def _project_embeddings(self, net, loader, k):
+    def _project_embeddings(self, args, net, loader, k):
         imgs, lbls = loader.dataset.get_k_samples(k)
 
         lbls = list(map(lambda x: x.argmax(), lbls))
 
         imgs = torch.stack(imgs)
-        lbls = torch.stack(lbls)
+        # lbls = torch.stack(lbls)
 
         print('imgs.shape', imgs.shape)
-        features, logits = net.forward(imgs, is_feat=True)
+        if args.cuda:
+            imgs_c = Variable(imgs.cuda())
+        else:
+            imgs_c = Variable(imgs)
+
+        features, logits = net.forward(imgs_c, is_feat=True)
         feats = features[-1]
 
         print('feats.shape', feats.shape)
