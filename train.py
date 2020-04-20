@@ -140,7 +140,7 @@ def main():
     logger.info(f"Loading {best_model_top} model...")
     tm_net = model_methods_top.load_model(args, tm_net, best_model_top)
 
-    model_methods_top.test_fewshot(args, tm_net, testLoader)
+    model_methods_top.test_fewshot(args, tm_net, testLoader, loss_fn)
 
     #  learning_rate = learning_rate * 0.95
 
