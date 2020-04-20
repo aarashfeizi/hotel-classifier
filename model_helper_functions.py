@@ -151,7 +151,7 @@ class ModelMethods:
         drew_graph = False
 
         print("Start projecting")
-        self._project_embeddings(net.ft_net, trainLoader, 100)
+        self._project_embeddings(args, net.ft_net, trainLoader, 100)
         print("Projecting done")
 
         for epoch in range(epochs):
