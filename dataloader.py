@@ -124,6 +124,29 @@ class CUBTrain_Top(Dataset):
             image2 = self.transform(image2)
         return image1, image2, torch.from_numpy(np.array([label], dtype=np.float32))
 
+    def _get_single_item(self, index):
+        label, image_path = self.shuffled_data[index]
+
+        image = Image.open(image_path)
+
+        image = image.convert('RGB')
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image, torch.from_numpy(np.array(label, dtype=np.float32))
+
+    def get_k_samples(self, k=100):
+        ks = np.random.randint(len(self.shuffled_data), size=k)
+        imgs = []
+        lbls = []
+        for i in ks:
+            img, lbl = self._get_single_item(i)
+            imgs.append(img)
+            lbls.append(lbl)
+
+        return imgs, lbls
+
 
 class CUBTest_Fewshot(Dataset):
 
@@ -172,7 +195,6 @@ class CUBClassification(Dataset):
         self.shuffled_data = get_shuffled_data(self.datas, seed=args.seed)
         # import pdb
         # pdb.set_trace()
-
 
     def __getitem__(self, index):
         label, image_path = self.shuffled_data[index]

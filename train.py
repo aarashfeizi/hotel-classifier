@@ -7,6 +7,7 @@ from torchvision import transforms
 import utils
 from dataloader import *
 from models.top_model import *
+import model_helper_functions
 
 
 def _logger():
@@ -99,7 +100,7 @@ def main():
     # if args.cuda:
     #     feat_ext.cuda()
     #
-    # model_methods = utils.ModelMethods(args, logger, 'res')
+    # model_methods = model_helper_functions.ModelMethods(args, logger, 'res')
     #
     # logger.info('Training Res')
     # feat_net = model_methods.train_classify(feat_ext, loss_fn, args, train_classify_loader, None)
@@ -111,7 +112,7 @@ def main():
     #
     # print('loading trained feature model done!')
 
-    model_methods_top = utils.ModelMethods(args, logger, 'top')
+    model_methods_top = model_helper_functions.ModelMethods(args, logger, 'top')
     # tm_net = top_module(args=args, trained_feat_net=feat_net, num_classes=num_classes)
     tm_net = top_module(args=args, num_classes=num_classes)
 
