@@ -332,7 +332,7 @@ class ModelMethods:
         net.eval()
 
         if val:
-            prompt_text = 'VAL SIMPLE:\tVal set\tcorrect:\t%d\terror:\t%d\tval_loss:%f\tval_acc:%f\tval_rec:%f\tval_negacc:%f\t'
+            prompt_text = f'VAL SIMPLE epoch {epoch}: \tcorrect:\t%d\terror:\t%d\tval_loss:%f\tval_acc:%f\tval_rec:%f\tval_negacc:%f\t'
             prompt_text_tb = 'Val'
         else:
             prompt_text = 'TEST SIMPLE:\tTest set\tcorrect:\t%d\terror:\t%d\ttest_loss:%f\ttest_acc:%f\ttest_rec:%f\ttest_negacc:%f\t'
@@ -379,10 +379,10 @@ class ModelMethods:
         net.eval()
 
         if val:
-            prompt_text = 'VAL FEW SHOT:\tVal set\tcorrect:\t%d\terror:\t%d\tval_acc:%f\tval_loss:%f\t'
+            prompt_text = f'VAL FEW SHOT epoch {epoch}:\tcorrect:\t%d\terror:\t%d\tval_acc:%f\tval_loss:%f\t'
             prompt_text_tb = 'Val'
         else:
-            prompt_text = 'TEST FEW SHOT:\tTest set\tcorrect:\t%d\terror:\t%d\ttest_acc:%f\ttest_loss:%f\t'
+            prompt_text = 'TEST FEW SHOT:\tcorrect:\t%d\terror:\t%d\ttest_acc:%f\ttest_loss:%f\t'
             prompt_text_tb = 'Test'
 
         tests_right, tests_error = 0, 0
@@ -421,7 +421,7 @@ class ModelMethods:
         return tests_right, tests_error, test_acc
 
     def load_model(self, args, net, best_model):
-        checkpoint = torch.load(os.path.join(args.save_path, best_model))
+        checkpoint = torch.load(os.path.join(self.save_path, best_model))
         self.logger.info('Loading model %s from epoch [%d]' % (best_model, checkpoint['epoch']))
         net.load_state_dict(checkpoint['model_state_dict'])
         return net
