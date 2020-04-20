@@ -7,3 +7,4 @@ savedmodels/
 .DS_Store
 *.csv
 *.png
+logs/

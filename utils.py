@@ -1,7 +1,7 @@
 import argparse
 import os
 import pickle
-import time
+import datetime
 from collections import deque
 
 import numpy as np
@@ -141,7 +141,7 @@ def get_args():
 class ModelMethods:
 
     def __init__(self, args, logger, model='top'):  # res or top
-        id_str = str(time.time())
+        id_str = str(datetime.datetime.now()).replace(' ', '-')
         id_str = '-time_' + id_str[:id_str.find('.')]
 
         self.model = model
@@ -250,6 +250,8 @@ class ModelMethods:
         max_val_acc = 0
         best_model = ''
 
+        drew_graph = False
+
         for epoch in range(epochs):
 
             train_loss = 0
@@ -264,6 +266,11 @@ class ModelMethods:
                         img1, img2, label = Variable(img1.cuda()), Variable(img2.cuda()), Variable(label.cuda())
                     else:
                         img1, img2, label = Variable(img1), Variable(img2), Variable(label)
+
+                    if not drew_graph:
+                        self.writer.add_graph(net, (img1, img2), verbose=True)
+                        self.writer.flush()
+                        drew_graph = True
 
                     net.train()
                     opt.zero_grad()
