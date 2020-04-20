@@ -17,7 +17,7 @@ import utils
 class ModelMethods:
 
     def __init__(self, args, logger, model='top'):  # res or top
-        id_str = str(datetime.datetime.now()).replace(' ', '-')
+        id_str = str(datetime.datetime.now()).replace(' ', '_').replace(':', '-')
         id_str = '-time_' + id_str[:id_str.find('.')]
 
         self.model = model
@@ -150,9 +150,6 @@ class ModelMethods:
 
         drew_graph = False
 
-        print("Start projecting")
-        self._project_embeddings(args, net.ft_net, trainLoader, 100)
-        print("Projecting done")
 
         for epoch in range(epochs):
 
@@ -234,6 +231,10 @@ class ModelMethods:
         print("#" * 70)
         print('queue len: ', len(queue))
         print("final accuracy with train_losses: ", acc / len(queue))
+
+        print("Start projecting")
+        self._project_embeddings(args, net.ft_net, trainLoader, 1000)
+        print("Projecting done")
 
         return net, best_model
 
