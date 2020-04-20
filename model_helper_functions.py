@@ -72,7 +72,7 @@ class ModelMethods:
 
         print('feats.shape', feats.shape)
 
-        self.writer.add_embedding(mat=feats, metadata=lbls, label_img=imgs)
+        self.writer.add_embedding(mat=feats.view(k, -1), metadata=lbls, label_img=imgs)
         self.writer.flush()
 
     def train_classify(self, net, loss_fn, args, trainLoader, valLoader):
