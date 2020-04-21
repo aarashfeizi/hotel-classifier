@@ -18,7 +18,7 @@ class ModelMethods:
 
     def __init__(self, args, logger, model='top'):  # res or top
         id_str = str(datetime.datetime.now()).replace(' ', '_').replace(':', '-')
-        id_str = '-time_' + id_str[:id_str.find('.')]
+        id_str = '-time_' + id_str[:id_str.find('.') + 3].replace('.', '-')
 
         self.model = model
         self.model_name = self._parse_args(args)
