@@ -45,11 +45,11 @@ def load_cub_data(args):
     split_path = args.split_path
     data_path = args.data_path
 
-    with open(os.path.join(split_path, 'testclasses.txt')) as f:
+    with open(os.path.join(split_path, 'testclasses2.txt')) as f:
         test_cls = f.read().split('\n')[:-1]
-    with open(os.path.join(split_path, 'trainclasses1.txt')) as f:
+    with open(os.path.join(split_path, 'trainclasses2.txt')) as f:
         train_cls = f.read().split('\n')[:-1]
-    with open(os.path.join(split_path, 'valclasses1.txt')) as f:
+    with open(os.path.join(split_path, 'valclasses2.txt')) as f:
         val_cls = f.read().split('\n')[:-1]
 
     tr = []
@@ -66,7 +66,7 @@ def load_cub_data(args):
 
     for train in train_cls:
         lbl = int(train[:3])
-        ln, tr_r, kwn_vl_r, kwn_ts_r = make_dataset(os.path.join(data_path, train), label=lbl, split=0.1, three_split=True)
+        ln, tr_r, kwn_vl_r, kwn_ts_r = make_dataset(os.path.join(data_path, train), label=lbl, split=0.3, three_split=True)
         total_train += ln
         tr.extend(tr_r)
         kwn_vl.extend(kwn_vl_r)
@@ -74,7 +74,7 @@ def load_cub_data(args):
 
     for val in val_cls:
         lbl = int(val[:3])
-        ln, ukwn_vl_r, kwn_ts_r = make_dataset(os.path.join(data_path, val), label=lbl, split=0.10)
+        ln, ukwn_vl_r, kwn_ts_r = make_dataset(os.path.join(data_path, val), label=lbl, split=0.2)
         total_val += ln
         ukwn_vl.extend(ukwn_vl_r)
         kwn_ts.extend(kwn_ts_r)
@@ -104,6 +104,12 @@ def load_cub_data(args):
 
     input()
 
+
+    if not os.path.exists(os.path.join(data_path, 'newsplits')):
+        data_path = os.path.join(data_path, 'newsplits')
+        os.mkdir(data_path)
+    else:
+        data_path = os.path.join(data_path, 'newsplits')
 
     save_dataset(tr, data_path, 'train')
     save_dataset(kwn_vl, data_path, 'knwn_cls_val')
