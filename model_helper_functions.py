@@ -47,6 +47,7 @@ class ModelMethods:
                           'sigmoid',
                           'freeze_ext',
                           'feat_extractor']
+
         for arg in vars(args):
             if str(arg) in important_args:
                 name += '-' + str(arg) + '_' + str(getattr(args, arg))

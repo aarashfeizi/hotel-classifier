@@ -126,7 +126,6 @@ class ResNet(tResNet):
         super(ResNet, self).__init__(block, layers)
         self.new_fc = nn.Linear(512, num_classes)
 
-
     def forward(self, x, is_feat=False):
 
         x = self.conv1(x)
@@ -169,13 +168,14 @@ class ResNet(tResNet):
 def _resnet(arch, block, layers, pretrained, progress, num_classes, **kwargs):
     model = ResNet(block, layers, num_classes, **kwargs)
     if pretrained:
-        state_dict = torch.load('models/pretrained_resnet18.pt')['model_state_dict']
+        print(f'loading {arch} from pretrained')
+        state_dict = torch.load(f'models/pretrained_{arch}.pt')['model_state_dict']
         model.load_my_state_dict(state_dict)
         print('pretrained loaded!')
     return model
 
 
-def resnet18(pretrained=False, progress=True, num_classes=-1, **kwargs):
+def resnet18(pretrained=False, progress=True, num_classes=1, **kwargs):
     r"""ResNet-18 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
     Args:
@@ -186,25 +186,25 @@ def resnet18(pretrained=False, progress=True, num_classes=-1, **kwargs):
                    **kwargs)
 
 
-def resnet34(pretrained=False, progress=True, **kwargs):
+def resnet34(pretrained=False, progress=True, num_classes=1, **kwargs):
     r"""ResNet-34 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet34', BasicBlock, [3, 4, 6, 3], pretrained, progress,
+    return _resnet('resnet34', BasicBlock, [3, 4, 6, 3], pretrained, progress, num_classes,
                    **kwargs)
 
 
-def resnet50(pretrained=False, progress=True, **kwargs):
+def resnet50(pretrained=False, progress=True, num_classes=3, **kwargs):
     r"""ResNet-50 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet50', Bottleneck, [3, 4, 6, 3], pretrained, progress,
+    return _resnet('resnet50', Bottleneck, [3, 4, 6, 3], pretrained, progress, num_classes,
                    **kwargs)
 
 
@@ -292,20 +292,21 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser('argument for training')
-    parser.add_argument('--model', type=str, choices=['resnet12', 'resnet18', 'resnet24', 'resnet50', 'resnet101',
+    parser.add_argument('--model', type=str, choices=['resnet12', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
                                                       'seresnet12', 'seresnet18', 'seresnet24', 'seresnet50',
                                                       'seresnet101'])
     args = parser.parse_args()
 
     model_dict = {
         'resnet18': resnet18,
+        'resnet34': resnet34,
         'resnet50': resnet50,
         'resnet101': resnet101,
     }
 
     model = model_dict[args.model](pretrained=True)
     torch.save({'model_state_dict': model.state_dict()},
-               'models/pretrained_resnet18.pt')
+               f'models/pretrained_{args.model}.pt')
     # data = torch.randn(2, 3, 64, 64)
     # data = torch.randn(64, 50, 3, 10)
     # data = torch.randn(10, 3, 64, 64)

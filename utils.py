@@ -57,13 +57,13 @@ class Metric:
 
     def update_acc(self, output, label):
         pred = (output >= 0)
-        print(output.size())
-        print(label.size())
-        print('output: ', output)
-        print(label)
+        # print(output.size())
+        # print(label.size())
+        # print('output: ', output)
+        # print(label)
         batch_rights = sum(label.type(torch.int64) == pred.type(torch.int64)).cpu().numpy()[0]
 
-        print(f'batch_rights: {batch_rights}')
+        # print(f'batch_rights: {batch_rights}')
 
         self.rights += batch_rights
         self.wrongs += (label.shape[0] - batch_rights)
@@ -101,7 +101,8 @@ def get_args():
     parser.add_argument('-r', '--rotate', default=0.0, type=float)
     parser.add_argument('-mn', '--model_name', default='')
     parser.add_argument('-ev', '--eval_mode', default='fewshot', choices=['fewshot', 'simple'])
-    parser.add_argument('-fe', '--feat_extractor', default='resnet18', choices=['resnet18', 'resnet50', 'resnet101'])
+    parser.add_argument('-fe', '--feat_extractor', default='resnet18',
+                        choices=['resnet18', 'resnet34', 'resnet50', 'resnet101'])
     parser.add_argument('-sg', '--sigmoid', default=False, action='store_true')
     parser.add_argument('-fr', '--freeze_ext', default=False, action='store_true')
     parser.add_argument('-el', '--extra_layer', default=False, action='store_true')
@@ -131,4 +132,3 @@ def get_args():
     args = parser.parse_args()
 
     return args
-

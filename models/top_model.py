@@ -37,6 +37,7 @@ def top_module(args, trained_feat_net=None, trained_sm_net=None, num_classes=1):
 
     model_dict = {
         'resnet18': resnet18,
+        'resnet34': resnet34,
         'resnet50': resnet50,
         'resnet101': resnet101,
     }
