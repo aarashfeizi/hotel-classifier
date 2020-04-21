@@ -53,7 +53,7 @@ class ModelMethods:
 
         return name
 
-    def _project_embeddings(self, args, net, loader, k):
+    def _tb_project_embeddings(self, args, net, loader, k):
         imgs, lbls = loader.dataset.get_k_samples(k)
 
         lbls = list(map(lambda x: x.argmax(), lbls))
@@ -73,6 +73,14 @@ class ModelMethods:
         print('feats.shape', feats.shape)
 
         self.writer.add_embedding(mat=feats.view(k, -1), metadata=lbls, label_img=imgs)
+        self.writer.flush()
+
+    def _tb_draw_histograms(self, args, net, epoch):
+
+        for name, param in net.named_parameters():
+            if param.requires_grad:
+                self.writer.add_histogram(name, param.flatten(), epoch)
+
         self.writer.flush()
 
     def train_classify(self, net, loss_fn, args, trainLoader, valLoader):
@@ -150,7 +158,6 @@ class ModelMethods:
 
         drew_graph = False
 
-
         for epoch in range(epochs):
 
             train_loss = 0
@@ -222,6 +229,8 @@ class ModelMethods:
 
                     queue.append(val_rgt * 1.0 / (val_rgt + val_err))
 
+            self._tb_draw_histograms(args, net, epoch)
+
         with open('train_losses', 'wb') as f:
             pickle.dump(train_losses, f)
 
@@ -233,7 +242,7 @@ class ModelMethods:
         print("final accuracy with train_losses: ", acc / len(queue))
 
         print("Start projecting")
-        self._project_embeddings(args, net.ft_net, trainLoader, 1000)
+        self._tb_project_embeddings(args, net.ft_net, trainLoader, 1000)
         print("Projecting done")
 
         return net, best_model
