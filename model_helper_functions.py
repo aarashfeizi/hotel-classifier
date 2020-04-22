@@ -46,7 +46,8 @@ class ModelMethods:
                           'ep',
                           'sigmoid',
                           'freeze_ext',
-                          'feat_extractor']
+                          'feat_extractor',
+                          'extra_layer']
 
         for arg in vars(args):
             if str(arg) in important_args:
