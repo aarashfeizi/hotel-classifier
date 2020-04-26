@@ -48,7 +48,8 @@ class ModelMethods:
                           'sigmoid',
                           'freeze_ext',
                           'feat_extractor',
-                          'extra_layer']
+                          'extra_layer',
+                          'dataset_split_type']
 
         for arg in vars(args):
             if str(arg) in important_args:
