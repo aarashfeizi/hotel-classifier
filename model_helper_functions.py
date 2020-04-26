@@ -240,12 +240,13 @@ class ModelMethods:
 
                     if self.new_split_type:
                         self.logger.info('known val acc: [%f], unknown val acc [%f]' % (val_acc_knwn, val_acc_unknwn))
+                        self.logger.info('*' * 30)
                         if val_acc_knwn > max_val_acc_knwn:
                             self.logger.info(
                                 'known val acc: [%f], beats previous max [%f]' % (val_acc_knwn, max_val_acc_knwn))
                             self.logger.info('known rights: [%d], known errs [%d]' % (val_rgt_knwn, val_err_knwn))
                             max_val_acc_knwn = val_acc_knwn
-                            
+
                         if val_acc_unknwn > max_val_acc_unknwn:
                             self.logger.info(
                                 'unknown val acc: [%f], beats previous max [%f]' % (val_acc_unknwn, max_val_acc_unknwn))
@@ -255,6 +256,9 @@ class ModelMethods:
 
                         val_acc = ((val_rgt_knwn + val_rgt_unknwn) * 1.0) / (
                                 val_rgt_knwn + val_rgt_unknwn + val_err_knwn + val_err_unknwn)
+
+                        val_rgt = (val_rgt_knwn + val_rgt_unknwn)
+                        val_err = (val_err_knwn + val_err_unknwn)
 
                     if val_acc > max_val_acc:
                         val_counter = 0
@@ -345,10 +349,10 @@ class ModelMethods:
 
         if val:
             prompt_text = comment + f' VAL FEW SHOT epoch {epoch}:\tcorrect:\t%d\terror:\t%d\tval_acc:%f\tval_loss:%f\t'
-            prompt_text_tb = comment + ' Val'
+            prompt_text_tb = comment + '_Val'
         else:
             prompt_text = comment + ' TEST FEW SHOT:\tcorrect:\t%d\terror:\t%d\ttest_acc:%f\ttest_loss:%f\t'
-            prompt_text_tb = comment + ' Test'
+            prompt_text_tb = comment + '_Test'
 
         tests_right, tests_error = 0, 0
 
