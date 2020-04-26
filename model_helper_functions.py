@@ -258,6 +258,9 @@ class ModelMethods:
                         val_acc = ((val_rgt_knwn + val_rgt_unknwn) * 1.0) / (
                                 val_rgt_knwn + val_rgt_unknwn + val_err_knwn + val_err_unknwn)
 
+                        self.writer.add_scalar('Total_Val/Acc',  val_acc, epoch)
+                        self.writer.flush()
+
                         val_rgt = (val_rgt_knwn + val_rgt_unknwn)
                         val_err = (val_err_knwn + val_err_unknwn)
 
