@@ -23,6 +23,7 @@ class ModelMethods:
         self.model = model
         self.model_name = self._parse_args(args)
         self.save_path = os.path.join(args.save_path, self.model_name + id_str)
+        self.new_split_type = args.dataset_split_type == 'new'
         self.tensorboard_path = os.path.join(args.log_path, 'tensorboard-' + self.model_name + id_str)
         self.logger = logger
         self.writer = SummaryWriter(self.tensorboard_path)
@@ -138,7 +139,7 @@ class ModelMethods:
 
         return net
 
-    def train_fewshot(self, net, loss_fn, args, trainLoader, valLoader):
+    def train_fewshot(self, net, loss_fn, args, train_loader, val_loaders, val_tol=5):
         net.train()
 
         opt = torch.optim.Adam(net.parameters(), lr=args.lr)
@@ -156,17 +157,21 @@ class ModelMethods:
         metric = utils.Metric()
 
         max_val_acc = 0
+        max_val_acc_knwn = 0
+        max_val_acc_unknwn = 0
         best_model = ''
 
         drew_graph = False
+
+        val_counter = 0
 
         for epoch in range(epochs):
 
             train_loss = 0
             metric.reset_acc()
 
-            with tqdm(total=len(trainLoader), desc=f'Epoch {epoch + 1}/{args.epochs}') as t:
-                for batch_id, (img1, img2, label) in enumerate(trainLoader, 1):
+            with tqdm(total=len(train_loader), desc=f'Epoch {epoch + 1}/{args.epochs}') as t:
+                for batch_id, (img1, img2, label) in enumerate(train_loader, 1):
 
                     # print('input: ', img1.size())
 
@@ -204,30 +209,69 @@ class ModelMethods:
 
                     t.update()
 
-                self.writer.add_scalar('Train/Loss', train_loss, epoch)
+                self.writer.add_scalar('Train/Loss', train_loss / len(train_loader), epoch)
                 self.writer.add_scalar('Train/Acc', metric.get_acc(), epoch)
                 self.writer.flush()
 
-                if valLoader is not None and epoch % args.test_freq == 0:
+                if val_loaders is not None and epoch % args.test_freq == 0:
                     net.eval()
 
+                    val_acc_unknwn, val_acc_knwn = -1, -1
+
                     if args.eval_mode == 'fewshot':
-                        val_rgt, val_err, val_acc = self.test_fewshot(args, net, valLoader, loss_fn, val=True,
-                                                                      epoch=epoch)
-                    elif args.eval_mode == 'simple':
-                        val_rgt, val_err, val_acc = self.test_simple(args, net, valLoader, loss_fn, val=True,
+                        if not self.new_split_type:
+                            val_rgt, val_err, val_acc = self.test_fewshot(args, net, val_loaders[0], loss_fn, val=True,
+                                                                          epoch=epoch)
+                        else:
+                            val_rgt_knwn, val_err_knwn, val_acc_knwn = self.test_fewshot(args, net, val_loaders[0],
+                                                                                         loss_fn, val=True,
+                                                                                         epoch=epoch, comment='known')
+                            val_rgt_unknwn, val_err_unknwn, val_acc_unknwn = self.test_fewshot(args, net,
+                                                                                               val_loaders[1], loss_fn,
+                                                                                               val=True,
+                                                                                               epoch=epoch,
+                                                                                               comment='unknown')
+
+                    elif args.eval_mode == 'simple':  # todo not compatible with new data-splits
+                        val_rgt, val_err, val_acc = self.test_simple(args, net, val_loaders, loss_fn, val=True,
                                                                      epoch=epoch)
                     else:
                         raise Exception('Unsupporeted eval mode')
 
+                    if self.new_split_type:
+                        self.logger.info('known val acc: [%f], unknown val acc [%f]' % (val_acc_knwn, val_acc_unknwn))
+                        if val_acc_knwn > max_val_acc_knwn:
+                            self.logger.info(
+                                'known val acc: [%f], beats previous max [%f]' % (val_acc_knwn, max_val_acc_knwn))
+                            self.logger.info('known rights: [%d], known errs [%d]' % (val_rgt_knwn, val_err_knwn))
+                            max_val_acc_knwn = val_acc_knwn
+                            
+                        if val_acc_unknwn > max_val_acc_unknwn:
+                            self.logger.info(
+                                'unknown val acc: [%f], beats previous max [%f]' % (val_acc_unknwn, max_val_acc_unknwn))
+                            self.logger.info(
+                                'unknown rights: [%d], unknown errs [%d]' % (val_rgt_unknwn, val_err_unknwn))
+                            max_val_acc_unknwn = val_acc_unknwn
+
+                        val_acc = ((val_rgt_knwn + val_rgt_unknwn) * 1.0) / (
+                                val_rgt_knwn + val_rgt_unknwn + val_err_knwn + val_err_unknwn)
+
                     if val_acc > max_val_acc:
+                        val_counter = 0
                         self.logger.info(
                             'saving model... current val acc: [%f], previous val acc [%f]' % (val_acc, max_val_acc))
                         best_model = self.save_model(args, net, epoch, val_acc)
                         max_val_acc = val_acc
 
                     else:
+                        val_counter += 1
                         self.logger.info('Not saving, best val [%f], current was [%f]' % (max_val_acc, val_acc))
+
+                        if val_counter >= val_tol:  # early stopping
+                            self.logger.info(
+                                '*** Early Stopping, validation acc did not exceed [%f] in %d val accuracies ***' % (
+                                    max_val_acc, val_tol))
+                            break
 
                     queue.append(val_rgt * 1.0 / (val_rgt + val_err))
 
@@ -244,7 +288,7 @@ class ModelMethods:
         print("final accuracy with train_losses: ", acc / len(queue))
 
         print("Start projecting")
-        self._tb_project_embeddings(args, net.ft_net, trainLoader, 1000)
+        self._tb_project_embeddings(args, net.ft_net, train_loader, 1000)
         print("Projecting done")
 
         return net, best_model
@@ -296,15 +340,15 @@ class ModelMethods:
 
         return tests_right, tests_error, test_acc
 
-    def test_fewshot(self, args, net, data_loader, loss_fn, val=False, epoch=0):
+    def test_fewshot(self, args, net, data_loader, loss_fn, val=False, epoch=0, comment=''):
         net.eval()
 
         if val:
-            prompt_text = f'VAL FEW SHOT epoch {epoch}:\tcorrect:\t%d\terror:\t%d\tval_acc:%f\tval_loss:%f\t'
-            prompt_text_tb = 'Val'
+            prompt_text = comment + f' VAL FEW SHOT epoch {epoch}:\tcorrect:\t%d\terror:\t%d\tval_acc:%f\tval_loss:%f\t'
+            prompt_text_tb = comment + ' Val'
         else:
-            prompt_text = 'TEST FEW SHOT:\tcorrect:\t%d\terror:\t%d\ttest_acc:%f\ttest_loss:%f\t'
-            prompt_text_tb = 'Test'
+            prompt_text = comment + ' TEST FEW SHOT:\tcorrect:\t%d\terror:\t%d\ttest_acc:%f\ttest_loss:%f\t'
+            prompt_text_tb = comment + ' Test'
 
         tests_right, tests_error = 0, 0
 

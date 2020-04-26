@@ -9,12 +9,7 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 
-def loadCUBToMem(dataPath, dataset_name, mode='train'):
-    if dataset_name == 'cub':
-        dataset_path = os.path.join(dataPath, 'CUB')
-    print("begin loading dataset to memory")
-    datas = {}
-
+def _read_org_split(dataset_path, mode):
     image_labels = []
     image_path = []
 
@@ -38,6 +33,31 @@ def loadCUBToMem(dataPath, dataset_name, mode='train'):
             novel_dict = json.load(f)
         image_labels.extend(novel_dict['image_labels'])
         image_path.extend(novel_dict['image_names'])
+
+    return image_path, image_labels
+
+
+def _read_new_split(dataset_path, mode):  # mode = [knwn_cls_test, knwn_cls_val, train, uknwn_cls_test, uknwn_cls_val]
+
+    file_name = 'cub_' + mode + '.csv'
+
+    file = pd.read_csv(os.path.join(dataset_path, file_name))
+    image_labels = list(file.label)
+    image_path = list(file.image)
+
+    return image_path, image_labels
+
+
+def loadCUBToMem(dataPath, dataset_name, split_type, mode='train'):
+    if dataset_name == 'cub':
+        dataset_path = os.path.join(dataPath, 'CUB')
+    print("begin loading daFtaset to memory")
+    datas = {}
+
+    if split_type == 'original':
+        image_path, image_labels = _read_org_split(dataset_path, mode)
+    elif split_type == 'new':
+        image_path, image_labels = _read_new_split(os.path.join(dataset_path, 'newsplits2'), mode)
 
     num_instances = len(image_labels)
 
@@ -76,13 +96,14 @@ def get_shuffled_data(datas, seed=0):  # for sequential labels only
 
 class CUBTrain_Top(Dataset):
 
-    def __init__(self, args, transform=None):
+    def __init__(self, args, transform=None, mode='train'):
         super(CUBTrain_Top, self).__init__()
         np.random.seed(args.seed)
         # self.dataset = dataset
         self.transform = transform
         self.datas, self.num_classes, self.length, self.labels = loadCUBToMem(args.dataset_path, args.dataset_name,
-                                                                              mode='train')
+                                                                              args.dataset_split_type,
+                                                                              mode=mode)
 
         self.shuffled_data = get_shuffled_data(datas=self.datas, seed=args.seed)
 
@@ -158,7 +179,8 @@ class CUBTest_Fewshot(Dataset):
         self.way = args.way
         self.img1 = None
         self.c1 = None
-        self.datas, self.num_classes, _, self.labels = loadCUBToMem(args.dataset_path, args.dataset_name, mode=mode)
+        self.datas, self.num_classes, _, self.labels = loadCUBToMem(args.dataset_path, args.dataset_name,
+                                                                              args.dataset_split_type, mode=mode)
 
     def __len__(self):
         return self.times * self.way
@@ -191,6 +213,7 @@ class CUBClassification(Dataset):
         np.random.seed(args.seed)
         self.transform = transform
         self.datas, self.num_classes, self.length, self.labels = loadCUBToMem(args.dataset_path, args.dataset_name,
+                                                                              args.dataset_split_type,
                                                                               mode=mode)
         self.shuffled_data = get_shuffled_data(self.datas, seed=args.seed)
         # import pdb

@@ -4,10 +4,10 @@ import sys
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
+import model_helper_functions
 import utils
 from dataloader import *
 from models.top_model import *
-import model_helper_functions
 
 
 def _logger():
@@ -49,24 +49,34 @@ def main():
         os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_ids
         print("use gpu:", args.gpu_ids, "to train.")
 
-    trainSet = None
-    testSet = None
-    valSet = None
+    train_set = None
+    test_set = None
+    val_set = None
 
     train_classification_dataset = CUBClassification(args, transform=data_transforms, mode='train')
 
     if args.dataset_name == 'cub':
-        trainSet = CUBTrain_Top(args, transform=data_transforms)
-        valSet = CUBTest_Fewshot(args, transform=data_transforms, mode='val')
-        testSet = CUBTest_Fewshot(args, transform=data_transforms)
+
+        if args.dataset_split_type == 'original':
+            train_set = CUBTrain_Top(args, transform=data_transforms)
+            val_set = CUBTest_Fewshot(args, transform=data_transforms, mode='val')
+            test_set = CUBTest_Fewshot(args, transform=data_transforms)
+
+        elif args.dataset_split_type == 'new':  # mode = [knwn_cls_test, knwn_cls_val, train, uknwn_cls_test, uknwn_cls_val]
+            train_set = CUBTrain_Top(args, transform=data_transforms, mode='train')
+            val_set_known = CUBTest_Fewshot(args, transform=data_transforms, mode='knwn_cls_val')
+            test_set_known = CUBTest_Fewshot(args, transform=data_transforms, mode='knwn_cls_test')
+            val_set_unknown = CUBTest_Fewshot(args, transform=data_transforms, mode='uknwn_cls_val')
+            test_set_unknown = CUBTest_Fewshot(args, transform=data_transforms, mode='uknwn_cls_test')
+
     elif args.dataset_name == 'omniglot':
-        trainSet = OmniglotTrain(args, transform=data_transforms)
-        # valSet = CUBTest(args, transform=data_transforms, mode='val')
-        testSet = OmniglotTest(args, transform=transforms.ToTensor())
+        train_set = OmniglotTrain(args, transform=data_transforms)
+        # val_set = CUBTest(args, transform=data_transforms, mode='val')
+        test_set = OmniglotTest(args, transform=transforms.ToTensor())
     elif args.dataset_name == 'hotels':
-        trainSet = HotelTrain(args, transform=data_transforms)
-        # valSet = CUBTest(args, transform=data_transforms, mode='val')
-        testSet = HotelTest(args, transform=data_transforms)
+        train_set = HotelTrain(args, transform=data_transforms)
+        # val_set = CUBTest(args, transform=data_transforms, mode='val')
+        test_set = HotelTest(args, transform=data_transforms)
     else:
         print('Fuck: ', args.dataset_name)
 
@@ -74,15 +84,30 @@ def main():
 
     train_classify_loader = DataLoader(train_classification_dataset, batch_size=args.batch_size, shuffle=False,
                                        num_workers=args.workers)
+    test_loaders = []
+    val_loaders = []
 
-    testLoader = DataLoader(testSet, batch_size=args.way, shuffle=False, num_workers=args.workers)
+    if args.dataset_split_type == 'original':
+        test_loaders.append(DataLoader(test_set, batch_size=args.way, shuffle=False, num_workers=args.workers))
 
-    trainLoader = DataLoader(trainSet, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    elif args.dataset_split_type == 'new':
+        test_loaders.append(DataLoader(test_set_known, batch_size=args.way, shuffle=False, num_workers=args.workers))
+        test_loaders.append(DataLoader(test_set_unknown, batch_size=args.way, shuffle=False, num_workers=args.workers))
 
-    if valSet is not None:
-        valLoader = DataLoader(valSet, batch_size=args.way, shuffle=False, num_workers=args.workers)
+    train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+
+    if (val_set is not None) or (val_set_known is not None):
+
+        if args.dataset_split_type == 'original':
+            val_loaders.append(DataLoader(val_set, batch_size=args.way, shuffle=False, num_workers=args.workers))
+
+        elif args.dataset_split_type == 'new':
+            val_loaders.append(
+                DataLoader(val_set_known, batch_size=args.way, shuffle=False, num_workers=args.workers))
+            val_loaders.append(
+                DataLoader(val_set_unknown, batch_size=args.way, shuffle=False, num_workers=args.workers))
     else:
-        valLoader = testLoader
+        val_loaders = test_loaders
 
     loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean')
 
@@ -131,7 +156,7 @@ def main():
     logger.info('Training Top')
     if args.model_name == '':  # train
         logger.info('Training')
-        tm_net, best_model_top = model_methods_top.train_fewshot(tm_net, loss_fn, args, trainLoader, valLoader)
+        tm_net, best_model_top = model_methods_top.train_fewshot(tm_net, loss_fn, args, train_loader, val_loaders)
     else:  # test
         logger.info('Testing')
         best_model_top = args.model_name
@@ -140,7 +165,7 @@ def main():
     logger.info(f"Loading {best_model_top} model...")
     tm_net = model_methods_top.load_model(args, tm_net, best_model_top)
 
-    model_methods_top.test_fewshot(args, tm_net, testLoader, loss_fn)
+    model_methods_top.test_fewshot(args, tm_net, test_loaders, loss_fn)
 
     #  learning_rate = learning_rate * 0.95
 
