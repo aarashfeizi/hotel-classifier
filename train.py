@@ -165,7 +165,11 @@ def main():
     logger.info(f"Loading {best_model_top} model...")
     tm_net = model_methods_top.load_model(args, tm_net, best_model_top)
 
-    model_methods_top.test_fewshot(args, tm_net, test_loaders, loss_fn)
+    if args.dataset_split_type == 'new':
+        model_methods_top.test_fewshot(args, tm_net, test_loaders[0], loss_fn, comment='known')
+        model_methods_top.test_fewshot(args, tm_net, test_loaders[1], loss_fn, comment='unknown')
+    else: # original
+        model_methods_top.test_fewshot(args, tm_net, test_loaders[0], loss_fn)
 
     #  learning_rate = learning_rate * 0.95
 
