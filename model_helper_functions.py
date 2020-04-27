@@ -49,7 +49,8 @@ class ModelMethods:
                           'freeze_ext',
                           'feat_extractor',
                           'extra_layer',
-                          'dataset_split_type']
+                          'dataset_split_type',
+                          'lr_diff']
 
         for arg in vars(args):
             if str(arg) in important_args:
