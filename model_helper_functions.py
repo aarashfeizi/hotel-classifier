@@ -140,9 +140,9 @@ class ModelMethods:
 
         return net
 
-    def train_fewshot(self, net, loss_fn, args, train_loader, val_loaders, val_tol=5):
+    def train_fewshot(self, net, loss_fn, args, train_loader, val_loaders):
         net.train()
-
+        val_tol = args.early_stopping
         opt = torch.optim.Adam(net.parameters(), lr=args.lr)
         opt.zero_grad()
 

@@ -8,3 +8,4 @@ savedmodels/
 *.csv
 *.png
 logs/
+new_logs/
