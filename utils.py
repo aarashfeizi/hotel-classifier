@@ -114,6 +114,8 @@ def get_args():
     parser.add_argument('-wr', '--workers', default=4, type=int, help="number of dataLoader workers")
     parser.add_argument('-bs', '--batch_size', default=128, type=int, help="number of batch size")
     parser.add_argument('-lr', '--lr', default=0.00006, type=float, help="learning rate")
+    parser.add_argument('-lrd', '--lr_diff', default=10, type=int,
+                        help="learning rate difference in order (between feature_extractor and siamese net)")
     parser.add_argument('-lf', '--log_freq', default=10, type=int, help="show result after each show_every iter.")
     parser.add_argument('-sf', '--save_freq', default=100, type=int, help="save model after each save_every iter.")
     parser.add_argument('-tf', '--test_freq', default=100, type=int, help="test model after each test_every iter.")

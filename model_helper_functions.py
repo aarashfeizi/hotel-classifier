@@ -143,7 +143,9 @@ class ModelMethods:
     def train_fewshot(self, net, loss_fn, args, train_loader, val_loaders):
         net.train()
         val_tol = args.early_stopping
-        opt = torch.optim.Adam(net.parameters(), lr=args.lr)
+        opt = torch.optim.Adam([{'params': net.sm_net.parameters()},
+                                {'params': net.ft_net.parameters(), 'lr': (args.lr / args.lr_diff)}], lr=args.lr)
+
         opt.zero_grad()
 
         train_losses = []
@@ -258,7 +260,7 @@ class ModelMethods:
                         val_acc = ((val_rgt_knwn + val_rgt_unknwn) * 1.0) / (
                                 val_rgt_knwn + val_rgt_unknwn + val_err_knwn + val_err_unknwn)
 
-                        self.writer.add_scalar('Total_Val/Acc',  val_acc, epoch)
+                        self.writer.add_scalar('Total_Val/Acc', val_acc, epoch)
                         self.writer.flush()
 
                         val_rgt = (val_rgt_knwn + val_rgt_unknwn)
