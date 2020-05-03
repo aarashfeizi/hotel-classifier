@@ -162,15 +162,17 @@ def main():
         best_model_top = args.model_name
 
     # testing
-    logger.info(f"Loading {best_model_top} model...")
-    tm_net = model_methods_top.load_model(args, tm_net, best_model_top)
+    if args.test:
+        logger.info(f"Loading {best_model_top} model...")
+        tm_net = model_methods_top.load_model(args, tm_net, best_model_top)
 
-    if args.dataset_split_type == 'new':
-        model_methods_top.test_fewshot(args, tm_net, test_loaders[0], loss_fn, comment='known')
-        model_methods_top.test_fewshot(args, tm_net, test_loaders[1], loss_fn, comment='unknown')
-    else: # original
-        model_methods_top.test_fewshot(args, tm_net, test_loaders[0], loss_fn)
-
+        if args.dataset_split_type == 'new':
+            model_methods_top.test_fewshot(args, tm_net, test_loaders[0], loss_fn, comment='known')
+            model_methods_top.test_fewshot(args, tm_net, test_loaders[1], loss_fn, comment='unknown')
+        else: # original
+            model_methods_top.test_fewshot(args, tm_net, test_loaders[0], loss_fn)
+    else:
+        logger.info("NO TESTING DONE.")
     #  learning_rate = learning_rate * 0.95
 
 

@@ -122,6 +122,8 @@ def get_args():
     # parser.add_argument('-ms', '--max_steps', default=50000, type=int, help="number of steps before stopping")
     parser.add_argument('-ep', '--epochs', default=1, type=int, help="number of epochs before stopping")
     parser.add_argument('-es', '--early_stopping', default=10, type=int, help="number of tol for validation acc")
+    parser.add_argument('-tst', '--test', default=False, action='store_true')
+
 
     parser.add_argument('-1cf', '--first_conv_filter', default=10, type=int, help="")
     parser.add_argument('-2cf', '--second_conv_filter', default=7, type=int, help="")
