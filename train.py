@@ -64,10 +64,10 @@ def main():
 
         elif args.dataset_split_type == 'new':  # mode = [knwn_cls_test, knwn_cls_val, train, uknwn_cls_test, uknwn_cls_val]
             train_set = CUBTrain_Top(args, transform=data_transforms, mode='train')
-            val_set_known = CUBTest_Fewshot(args, transform=data_transforms, mode='knwn_cls_val')
-            test_set_known = CUBTest_Fewshot(args, transform=data_transforms, mode='knwn_cls_test')
-            val_set_unknown = CUBTest_Fewshot(args, transform=data_transforms, mode='uknwn_cls_val')
-            test_set_unknown = CUBTest_Fewshot(args, transform=data_transforms, mode='uknwn_cls_test')
+            val_set_known = CUBTest_Fewshot(args, transform=data_transforms, mode='val_seen')
+            test_set_known = CUBTest_Fewshot(args, transform=data_transforms, mode='test_seen')
+            val_set_unknown = CUBTest_Fewshot(args, transform=data_transforms, mode='val_unseen')
+            test_set_unknown = CUBTest_Fewshot(args, transform=data_transforms, mode='test_unseen')
 
     elif args.dataset_name == 'omniglot':
         train_set = OmniglotTrain(args, transform=data_transforms)

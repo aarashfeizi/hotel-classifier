@@ -37,7 +37,7 @@ def _read_org_split(dataset_path, mode):
     return image_path, image_labels
 
 
-def _read_new_split(dataset_path, mode):  # mode = [knwn_cls_test, knwn_cls_val, train, uknwn_cls_test, uknwn_cls_val]
+def _read_new_split(dataset_path, mode):  # mode = [test_seen, val_seen, train, test_unseen, test_unseen]
 
     file_name = 'cub_' + mode + '.csv'
 
@@ -51,13 +51,13 @@ def _read_new_split(dataset_path, mode):  # mode = [knwn_cls_test, knwn_cls_val,
 def loadCUBToMem(dataPath, dataset_name, split_type, mode='train'):
     if dataset_name == 'cub':
         dataset_path = os.path.join(dataPath, 'CUB')
-    print("begin loading daFtaset to memory")
+    print("begin loading dataset to memory")
     datas = {}
 
     if split_type == 'original':
         image_path, image_labels = _read_org_split(dataset_path, mode)
     elif split_type == 'new':
-        image_path, image_labels = _read_new_split(os.path.join(dataset_path, 'newsplits2'), mode)
+        image_path, image_labels = _read_new_split(os.path.join(dataset_path, 'final_newsplits0_1'), mode)
 
     num_instances = len(image_labels)
 
@@ -66,7 +66,7 @@ def loadCUBToMem(dataPath, dataset_name, split_type, mode='train'):
     for idx, path in zip(image_labels, image_path):
         if idx not in datas.keys():
             datas[idx] = []
-        datas[idx].append(os.path.join(dataPath, path))
+        datas[idx].append(os.path.join(dataset_path, path))
 
     labels = np.unique(image_labels)
 

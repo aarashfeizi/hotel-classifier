@@ -91,7 +91,7 @@ def get_args():
 
     parser.add_argument('-dsn', '--dataset_name', default='omniglot', choices=['omniglot', 'cub', 'hotels'])
     parser.add_argument('-dsp', '--dataset_path', default='CUB/')
-    parser.add_argument('-dst', '--dataset_split_type', default='original', choices=['original', 'new'])
+    parser.add_argument('-dst', '--dataset_split_type', default='new', choices=['original', 'new'])
     parser.add_argument('-sdp', '--subdir_path', default='images/')
     parser.add_argument('-trp', '--train_path', default='./omniglot/python/images_background')
     parser.add_argument('-tsp', '--test_path', default='./omniglot/python/images_evaluation')
