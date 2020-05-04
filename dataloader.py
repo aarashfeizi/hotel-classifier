@@ -37,9 +37,10 @@ def _read_org_split(dataset_path, mode):
     return image_path, image_labels
 
 
-def _read_new_split(dataset_path, mode):  # mode = [test_seen, val_seen, train, test_unseen, test_unseen]
+def _read_new_split(dataset_path, mode,
+                    dataset_name='cub'):  # mode = [test_seen, val_seen, train, test_unseen, test_unseen]
 
-    file_name = 'cub_' + mode + '.csv'
+    file_name = f'{dataset_name}_' + mode + '.csv'
 
     file = pd.read_csv(os.path.join(dataset_path, file_name))
     image_labels = list(file.label)
@@ -48,16 +49,20 @@ def _read_new_split(dataset_path, mode):  # mode = [test_seen, val_seen, train, 
     return image_path, image_labels
 
 
-def loadCUBToMem(dataPath, dataset_name, split_type, mode='train'):
+def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_name='final_newsplits0_1'):
+    print(split_file_name, '!!!!!!!!')
     if dataset_name == 'cub':
         dataset_path = os.path.join(dataPath, 'CUB')
+    elif dataset_name == 'hotels':
+        dataset_path = os.path.join(dataPath, 'hotels')
+
     print("begin loading dataset to memory")
     datas = {}
 
     if split_type == 'original':
         image_path, image_labels = _read_org_split(dataset_path, mode)
     elif split_type == 'new':
-        image_path, image_labels = _read_new_split(os.path.join(dataset_path, 'final_newsplits0_1'), mode)
+        image_path, image_labels = _read_new_split(os.path.join(dataset_path, split_file_name), mode, dataset_name)
 
     num_instances = len(image_labels)
 
@@ -101,9 +106,9 @@ class CUBTrain_Top(Dataset):
         np.random.seed(args.seed)
         # self.dataset = dataset
         self.transform = transform
-        self.datas, self.num_classes, self.length, self.labels = loadCUBToMem(args.dataset_path, args.dataset_name,
-                                                                              args.dataset_split_type,
-                                                                              mode=mode)
+        self.datas, self.num_classes, self.length, self.labels = loadDataToMem(args.dataset_path, args.dataset_name,
+                                                                               args.dataset_split_type,
+                                                                               mode=mode)
 
         self.shuffled_data = get_shuffled_data(datas=self.datas, seed=args.seed)
 
@@ -179,8 +184,8 @@ class CUBTest_Fewshot(Dataset):
         self.way = args.way
         self.img1 = None
         self.c1 = None
-        self.datas, self.num_classes, _, self.labels = loadCUBToMem(args.dataset_path, args.dataset_name,
-                                                                              args.dataset_split_type, mode=mode)
+        self.datas, self.num_classes, _, self.labels = loadDataToMem(args.dataset_path, args.dataset_name,
+                                                                     args.dataset_split_type, mode=mode)
 
     def __len__(self):
         return self.times * self.way
@@ -212,9 +217,9 @@ class CUBClassification(Dataset):
         super(CUBClassification, self).__init__()
         np.random.seed(args.seed)
         self.transform = transform
-        self.datas, self.num_classes, self.length, self.labels = loadCUBToMem(args.dataset_path, args.dataset_name,
-                                                                              args.dataset_split_type,
-                                                                              mode=mode)
+        self.datas, self.num_classes, self.length, self.labels = loadDataToMem(args.dataset_path, args.dataset_name,
+                                                                               args.dataset_split_type,
+                                                                               mode=mode)
         self.shuffled_data = get_shuffled_data(self.datas, seed=args.seed)
         # import pdb
         # pdb.set_trace()
@@ -400,12 +405,17 @@ def loadHotels(dataset_path, dataset_name, mode='train'):
 
 
 class HotelTrain(Dataset):
-    def __init__(self, args, transform=None):
+    def __init__(self, args, transform=None, mode='train'):
         super(HotelTrain, self).__init__()
         np.random.seed(args.seed)
         self.transform = transform
-        self.datas, self.num_classes, self.length, self.labels = loadHotels(args.dataset_path, args.dataset_name,
-                                                                            mode='train')
+
+        self.datas, self.num_classes, self.length, self.labels = loadDataToMem(args.dataset_path, args.dataset_name,
+                                                                               args.dataset_split_type,
+                                                                               mode=mode, split_file_name='splits0_1')
+
+        self.shuffled_data = get_shuffled_data(datas=self.datas, seed=args.seed)
+
         print('hotel train classes: ', self.num_classes)
         print('hotel train length: ', self.length)
 
@@ -450,7 +460,7 @@ class HotelTrain(Dataset):
 
 class HotelTest(Dataset):
 
-    def __init__(self, args, transform=None):
+    def __init__(self, args, transform=None, mode='test_seen'):
         np.random.seed(args.seed)
         super(HotelTest, self).__init__()
         self.transform = transform
@@ -458,10 +468,13 @@ class HotelTest(Dataset):
         self.way = args.way
         self.img1 = None
         self.c1 = None
-        self.datas, self.num_classes, _, self.labels = loadHotels(args.dataset_path, args.dataset_name, mode='test')
 
-        print('hotel test classes: ', self.num_classes)
-        print('hotel test length: ', self.__len__())
+        self.datas, self.num_classes, _, self.labels = loadDataToMem(args.dataset_path, args.dataset_name,
+                                                                     args.dataset_split_type, mode=mode,
+                                                                     split_file_name='splits0_1')
+
+        print(f'hotel {mode} classes: ', self.num_classes)
+        print(f'hotel {mode} length: ', self.__len__())
 
     def __len__(self):
         return self.times * self.way

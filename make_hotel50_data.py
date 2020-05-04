@@ -2,7 +2,7 @@ import argparse
 import os
 import statistics
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -114,15 +114,7 @@ def get_size(df, path):
     return sizes, types
 
 
-def main():
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('-p', '--path', help="path")
-
-    args = parser.parse_args()
-
-    df = load_hotels_data(args.path)
-
+def plot_sizes(args, df):
     sizes, types = get_size(df, args.path)
 
     df['shape0'] = np.array(list(zip(*sizes))[0])
@@ -157,11 +149,216 @@ def main():
     plt.savefig('final_2.png')
 
 
+def sample_pairs(pairs, portion=0.33):
+    pairs_idx = np.random.choice([i for i in range(len(pairs))], int(np.floor(len(pairs) * portion)), replace=False)
+    pairs_paths = np.array(list(zip(*pairs))[0])[pairs_idx]
+    pairs_lbls = np.array(list(zip(*pairs))[1])[pairs_idx]
+
+    return list(zip(pairs_paths, pairs_lbls))
+
+
+def lbl_in_pairs(pairs):
+    pairs_lbls = list(list(zip(*pairs))[1])
+    pairs_lbls_u, pairs_lbls_c = np.unique(pairs_lbls, return_counts=True)
+
+    return pairs_lbls_u, pairs_lbls_c
+
+
+def create_splits(args, df):
+    lbls = df.hotel_label
+    paths = df.image
+
+    all_pairs = list(zip(paths, lbls))
+
+    lbls_unique, lbls_count = np.unique(lbls, return_counts=True)
+
+    lbls_unique_filtered = lbls_unique[lbls_count >= args.threshold]
+
+    pairs = []
+
+    for p, l in all_pairs:
+        if l in lbls_unique_filtered:
+            pairs.append((p, l))
+
+    test_unseen_lbls_u = np.random.choice(lbls_unique_filtered, args.test_unseen, replace=False)
+
+    trainval_lbls = np.array(list(set(lbls_unique_filtered) - set(test_unseen_lbls_u)), dtype=np.int64)
+
+    test_unseen = []
+    for pair in pairs:
+        if pair[1] in test_unseen_lbls_u:
+            test_unseen.append(pair)
+
+    old_len = len(pairs)
+    pairs = list(set(pairs) - set(test_unseen))
+
+    assert old_len > len(pairs)
+
+    pairs_dict = {}
+
+    for p, l in pairs:
+        if l not in pairs_dict.keys():
+            pairs_dict[l] = []
+        pairs_dict[l].append(p)
+
+    test_seen = []
+
+    for l, paths in pairs_dict.items():
+        chosen = np.random.choice(paths, 5, replace=False)
+        test_seen.extend([(p, l) for p in chosen])
+        paths = list(set(paths) - set(chosen))
+        pairs_dict[l] = paths
+
+    trainval_pairs = []
+
+    for l, ps in pairs_dict.items():
+        for p in ps:
+            trainval_pairs.append((p, l))
+
+    # test_unseen_lbls_u, test_unseen_lbls_c = lbl_in_pairs(test_unseen)
+
+    val_unseen_lbls_u = np.random.choice(trainval_lbls, args.val_unseen, replace=False)
+
+    val_unseen = []
+
+    for pair in trainval_pairs:
+        if pair[1] in val_unseen_lbls_u:
+            val_unseen.append(pair)
+
+    trainval_pairs = list(set(trainval_pairs) - set(val_unseen))
+
+    pairs_dict = {}
+
+    for p, l in trainval_pairs:
+        if l not in pairs_dict.keys():
+            pairs_dict[l] = []
+        pairs_dict[l].append(p)
+
+    val_seen = []
+
+    for l, paths in pairs_dict.items():
+        chosen = np.random.choice(paths, 5, replace=False)
+        val_seen.extend([(p, l) for p in chosen])
+        paths = list(set(paths) - set(chosen))
+        pairs_dict[l] = paths
+
+    train = []
+
+    for l, ps in pairs_dict.items():
+        for p in ps:
+            train.append((p, l))
+
+
+    output_string = ''
+
+    output_string += "unseen test: " + str(len(test_unseen)) + '\n'
+    _, c = lbl_in_pairs(test_unseen)
+    output_string += "unseen test min in classes: " + str(min(c)) + '\n'
+    output_string += "unseen test max in classes: " + str(max(c)) + '\n'
+
+    output_string += "seen test: " + str(len(test_seen)) + '\n'
+    _, c = lbl_in_pairs(test_seen)
+    output_string += "seen test min in classes: " + str(min(c)) + '\n'
+    output_string += "seen test max in classes: " + str(max(c)) + '\n'
+
+    output_string += "Total test set: " + str((len(test_seen) + len(test_unseen))) + '\n'
+
+
+    output_string += ('*' * 30) + '\n'
+
+    output_string += "unseen val: " + str(len(val_unseen)) + '\n'
+    _, c = lbl_in_pairs(val_unseen)
+    output_string += "unseen val min in classes: " + str(min(c)) + '\n'
+    output_string += "unseen val max in classes: " + str(max(c)) + '\n'
+
+    output_string += "seen val: " + str(len(val_seen)) + '\n'
+    _, c = lbl_in_pairs(val_seen)
+    output_string += "seen val min in classes: " + str(min(c)) + '\n'
+    output_string += "seen val max in classes: " + str(max(c)) + '\n'
+
+    output_string += "Total val set: " + str(len(val_unseen) + len(val_seen)) + '\n'
+
+    output_string += ('*' * 30) + '\n'
+
+    output_string += "Total train set: " + str(len(train)) + '\n'
+    _, c = lbl_in_pairs(train)
+    output_string += "train min in classes: " + str(min(c)) + '\n'
+    output_string += "train max in classes: " + str(max(c)) + '\n'
+
+    output_string += ('*' * 30) + '\n'
+
+    output_string += "Total trainval set: " + str(len(train) + len(val_seen) + len(val_unseen)) + '\n'
+
+    print(output_string)
+
+    input()
+
+    data_path = args.path
+
+    if not os.path.exists(os.path.join(data_path, f'splits{args.version}_{args.save_version}')):
+        data_path = os.path.join(data_path, f'splits{args.version}_{args.save_version}')
+        os.mkdir(data_path)
+    else:
+        data_path = os.path.join(data_path, f'splits{args.version}_{args.save_version}')
+
+    with open(os.path.join(data_path, 'config.txt'), 'w') as f:
+        f.write(output_string)
+
+    save_dataset(train, data_path, 'train')
+    save_dataset(val_seen, data_path, 'val_seen')
+    save_dataset(val_unseen, data_path, 'val_unseen')
+    save_dataset(test_seen, data_path, 'test_seen')
+    save_dataset(test_unseen, data_path, 'test_unseen')
+
+    _number_of_classes(data_path)
+
+
+def _number_of_classes(datapath):
+    print('data split path', datapath)
+    dirs = os.listdir(datapath)
+    csvs = []
+    names = []
+
+    for dir in dirs:
+        if dir.endswith('.csv'):
+            df = pd.read_csv(os.path.join(datapath, dir))
+            csvs.append(df)
+            names.append(dir[:-4])
+
+    for name, csv in zip(names, csvs):
+        print(name, "number of classes:", len(np.unique(list(csv.label))))
+
+
+
+def save_dataset(ls, data_path, name):
+    df = pd.DataFrame({'image': list(list(zip(*ls))[0]), 'label': list(list(zip(*ls))[1])})
+    df.to_csv(os.path.join(data_path, f'hotels_{name}.csv'), index=False, header=True)
+
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-p', '--path', default='../../dataset/hotels/' ,help="path")
+    parser.add_argument('-th', '--threshold', type=int, default=15, help="threshold")
+    parser.add_argument('-tu', '--test_unseen', type=int, default=1200, help="unseen_test")
+    parser.add_argument('-vu', '--val_unseen', type=int, default=1000, help="unseen_val")
+    parser.add_argument('-v', '--version', type=int, default=0, help="version")
+    parser.add_argument('-sv', '--save_version', type=int, default=1, help="save_version")
+
+    args = parser.parse_args()
+
+    df = load_hotels_data(args.path)
+
+    create_splits(args, df)
+
+    # plot_sizes(args, df)
+
+
 # https://jakevdp.github.io/PythonDataScienceHandbook/04.06-customizing-legends.html
 
 if __name__ == '__main__':
     main()
-
 
 ###
 # plt.figure(figsize=(100, 100))

@@ -53,7 +53,7 @@ def main():
     test_set = None
     val_set = None
 
-    train_classification_dataset = CUBClassification(args, transform=data_transforms, mode='train')
+    # train_classification_dataset = CUBClassification(args, transform=data_transforms, mode='train')
 
     if args.dataset_name == 'cub':
 
@@ -74,16 +74,24 @@ def main():
         # val_set = CUBTest(args, transform=data_transforms, mode='val')
         test_set = OmniglotTest(args, transform=transforms.ToTensor())
     elif args.dataset_name == 'hotels':
-        train_set = HotelTrain(args, transform=data_transforms)
-        # val_set = CUBTest(args, transform=data_transforms, mode='val')
-        test_set = HotelTest(args, transform=data_transforms)
+
+        print('I"M HEREEEEEE')
+        input()
+
+        train_set = HotelTrain(args, transform=data_transforms, mode='train')
+        val_set_known = HotelTest(args, transform=data_transforms, mode='val_seen')
+        test_set_known = HotelTest(args, transform=data_transforms, mode='test_seen')
+        val_set_unknown = HotelTest(args, transform=data_transforms, mode='val_unseen')
+        test_set_unknown = HotelTest(args, transform=data_transforms, mode='test_unseen')
+
+
     else:
         print('Fuck: ', args.dataset_name)
 
     print('way:', args.way)
 
-    train_classify_loader = DataLoader(train_classification_dataset, batch_size=args.batch_size, shuffle=False,
-                                       num_workers=args.workers)
+    # train_classify_loader = DataLoader(train_classification_dataset, batch_size=args.batch_size, shuffle=False,
+    #                                    num_workers=args.workers)
     test_loaders = []
     val_loaders = []
 
@@ -113,7 +121,7 @@ def main():
 
     # train resnet
 
-    num_classes = train_classification_dataset.num_classes
+    num_classes = train_set.num_classes
     #
     # print('num_classes', num_classes)
     #
