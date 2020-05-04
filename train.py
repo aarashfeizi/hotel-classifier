@@ -75,9 +75,6 @@ def main():
         test_set = OmniglotTest(args, transform=transforms.ToTensor())
     elif args.dataset_name == 'hotels':
 
-        print('I"M HEREEEEEE')
-        input()
-
         train_set = HotelTrain(args, transform=data_transforms, mode='train')
         val_set_known = HotelTest(args, transform=data_transforms, mode='val_seen')
         test_set_known = HotelTest(args, transform=data_transforms, mode='test_seen')
