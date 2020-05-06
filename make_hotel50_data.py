@@ -358,7 +358,7 @@ def save_dataset(ls, data_path, name):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-p', '--path', default='../../dataset/hotels/', help="path")
+    parser.add_argument('-p', '--path', default='../../dataset/hotels_v1/', help="path")
     parser.add_argument('-th', '--threshold', type=int, default=15, help="threshold")
     parser.add_argument('-tu', '--test_unseen', type=int, default=1200, help="unseen_test")
     parser.add_argument('-vu', '--val_unseen', type=int, default=1000, help="unseen_val")
@@ -369,7 +369,7 @@ def main():
 
     df = load_hotels_data(args.path)
 
-    # create_splits(args, df)
+    create_splits(args, df)
 
     # plot_sizes(args, df)
 
