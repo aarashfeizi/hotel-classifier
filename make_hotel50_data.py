@@ -23,80 +23,101 @@ def get_stats(l):
     return {'length': length, 'mean': mean, 'median': median, 'max': max, 'min': min, 'unique_values': u_v}
 
 
-def load_hotels_data(path):
+def load_hotels_data(path, directories=['train', 'test'],
+                     path_directories={'train': 'train', 'test': 'test/unoccluded'}):
     hotel_label_list = []
     cam_web_list = []
     image_list = []
     super_class_list = []
+    is_trainval_list = []
 
     org_path = path
 
-    if os.path.exists(os.path.join(path, 'hotel50-image_label.csv')):
+    if os.path.exists(os.path.join(path, 'hotel50-image_label_train_test_merged.csv')):
         print('hehe')
         print('Found csv!')
 
-        dataset = pd.read_csv(os.path.join(path, 'hotel50-image_label.csv'))
+        dataset = pd.read_csv(os.path.join(path, 'hotel50-image_label_train_test_merged.csv'))
 
     else:
         print('File not found, creating csv...')
 
-        path = os.path.join(path, 'images/train/')
-
-        fst_l_d = os.listdir(path)  # e.g. 1 10 11 12
+        hotels_chain_branch2lbl = {}
+        hotels_chain2lbl = {}
 
         label = 0
         super_class = 0
 
-        for f_dir in fst_l_d:
-            scd_path = os.path.join(path, f_dir)
-            print(scd_path)
+        for dir in directories:
 
-            if not _check_dir(scd_path):
-                continue
+            if dir == 'train':
+                is_trainval = 1
+            else:
+                is_trainval = 0
 
-            scd_l_d = os.listdir(scd_path)  # e.g. 9645 20303 3291 35913
+            path = os.path.join(org_path, f'images/{path_directories[dir]}/')
 
-            for s_dir in scd_l_d:  # All same super_class
-                thd_path = os.path.join(scd_path, s_dir)
+            fst_l_d = os.listdir(path)  # e.g. 1 10 11 12
 
-                if not _check_dir(thd_path):
+            for f_dir in fst_l_d:
+
+                scd_path = os.path.join(path, f_dir)
+                print(scd_path)
+
+                if not _check_dir(scd_path):
                     continue
 
-                thd_l_d = os.listdir(thd_path)  # e.g. traffickcam travel_website
+                if f_dir not in hotels_chain_branch2lbl.keys():
+                    hotels_chain_branch2lbl[f_dir] = {}
+                    hotels_chain2lbl[f_dir] = super_class
+                    super_class += 1
 
-                for t_dir in thd_l_d:  # all same labels
+                scd_l_d = os.listdir(scd_path)  # e.g. 9645 20303 3291 35913
 
-                    imagedir_path = os.path.join(thd_path, t_dir)
+                for s_dir in scd_l_d:  # All same super_class
 
-                    if not _check_dir(imagedir_path):
+                    thd_path = os.path.join(scd_path, s_dir)
+
+                    if not _check_dir(thd_path):
                         continue
 
-                    if t_dir == 'travel_website':
-                        is_website = 1
-                    elif t_dir == 'traffickcam':
-                        is_website = 0
-                    else:
-                        print(imagedir_path)
-                        raise Exception('FUCK')
+                    if s_dir not in hotels_chain_branch2lbl[f_dir].keys():
+                        hotels_chain_branch2lbl[f_dir][s_dir] = label
+                        label += 1
 
-                    if not _check_dir(imagedir_path):
-                        continue
+                    thd_l_d = os.listdir(thd_path)  # e.g. traffickcam travel_website
 
-                    images = os.listdir(imagedir_path)  # e.g. *.jpg
+                    for t_dir in thd_l_d:  # all same labels
 
-                    for image in images:
-                        image_path = os.path.join(imagedir_path, image)
-                        image_list.append(image_path[image_path.find('images'):])
-                        hotel_label_list.append(label)
-                        cam_web_list.append(is_website)
-                        super_class_list.append(super_class)
+                        imagedir_path = os.path.join(thd_path, t_dir)
 
-                label += 1
-            super_class += 1
+                        if not _check_dir(imagedir_path):
+                            continue
+
+                        if t_dir == 'travel_website':
+                            is_website = 1
+                        elif t_dir == 'traffickcam':
+                            is_website = 0
+                        else:
+                            print(imagedir_path)
+                            raise Exception('FUCK')
+
+                        if not _check_dir(imagedir_path):
+                            continue
+
+                        images = os.listdir(imagedir_path)  # e.g. *.jpg
+
+                        for image in images:
+                            image_path = os.path.join(imagedir_path, image)
+                            image_list.append(image_path[image_path.find('images'):])
+                            hotel_label_list.append(hotels_chain_branch2lbl[f_dir][s_dir])
+                            cam_web_list.append(is_website)
+                            super_class_list.append(hotels_chain2lbl[f_dir])
+                            is_trainval_list.append(is_trainval)
 
         dataset = pd.DataFrame({'image': image_list, 'hotel_label': hotel_label_list, 'super_class': super_class_list,
-                                'is_website': cam_web_list})
-        dataset.to_csv(os.path.join(org_path, 'hotel50-image_label.csv'), index=False, header=True)
+                                'is_website': cam_web_list, 'is_trianval': is_trainval_list})
+        dataset.to_csv(os.path.join(org_path, 'hotel50-image_label_train_test_merged.csv'), index=False, header=True)
 
     return dataset
 
@@ -248,7 +269,6 @@ def create_splits(args, df):
         for p in ps:
             train.append((p, l))
 
-
     output_string = ''
 
     output_string += "unseen test: " + str(len(test_unseen)) + '\n'
@@ -262,7 +282,6 @@ def create_splits(args, df):
     output_string += "seen test max in classes: " + str(max(c)) + '\n'
 
     output_string += "Total test set: " + str((len(test_seen) + len(test_unseen))) + '\n'
-
 
     output_string += ('*' * 30) + '\n'
 
@@ -329,17 +348,15 @@ def _number_of_classes(datapath):
         print(name, "number of classes:", len(np.unique(list(csv.label))))
 
 
-
 def save_dataset(ls, data_path, name):
     df = pd.DataFrame({'image': list(list(zip(*ls))[0]), 'label': list(list(zip(*ls))[1])})
     df.to_csv(os.path.join(data_path, f'hotels_{name}.csv'), index=False, header=True)
 
 
-
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-p', '--path', default='../../dataset/hotels/' ,help="path")
+    parser.add_argument('-p', '--path', default='../../dataset/hotels/', help="path")
     parser.add_argument('-th', '--threshold', type=int, default=15, help="threshold")
     parser.add_argument('-tu', '--test_unseen', type=int, default=1200, help="unseen_test")
     parser.add_argument('-vu', '--val_unseen', type=int, default=1000, help="unseen_val")
@@ -350,7 +367,7 @@ def main():
 
     df = load_hotels_data(args.path)
 
-    create_splits(args, df)
+    # create_splits(args, df)
 
     # plot_sizes(args, df)
 
