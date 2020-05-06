@@ -58,11 +58,13 @@ def load_hotels_data(path, directories=['train', 'test'],
             path = os.path.join(org_path, f'images/{path_directories[dir]}/')
 
             fst_l_d = os.listdir(path)  # e.g. 1 10 11 12
+            length = len(fst_l_d)
+            for i, f_dir in enumerate(fst_l_d):
 
-            for f_dir in fst_l_d:
+                percent = (1.0 * (i + 1)) / length
 
                 scd_path = os.path.join(path, f_dir)
-                print(scd_path)
+                print(percent, scd_path)
 
                 if not _check_dir(scd_path):
                     continue
