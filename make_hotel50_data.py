@@ -119,7 +119,8 @@ def load_hotels_data(path, directories=['train', 'test'],
 
         dataset = pd.DataFrame({'image': image_list, 'hotel_label': hotel_label_list, 'super_class': super_class_list,
                                 'is_website': cam_web_list, 'is_trianval': is_trainval_list})
-        dataset.to_csv(os.path.join(org_path, 'hotel50-image_label_train_test_merged.csv'), index=False, header=True)
+        #dataset.to_csv(os.path.join(org_path, 'hotel50-image_label_train_test_merged.csv'), index=False, header=True)
+        dataset.to_csv(os.path.join('.', 'hotel50-image_label_train_test_merged.csv'), index=False, header=True)
 
     return dataset
 
@@ -314,7 +315,7 @@ def create_splits(args, df):
 
     input()
 
-    data_path = args.path
+    data_path = '.'
 
     if not os.path.exists(os.path.join(data_path, f'splits{args.version}_{args.save_version}')):
         data_path = os.path.join(data_path, f'splits{args.version}_{args.save_version}')
