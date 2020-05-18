@@ -6,6 +6,7 @@ import statistics
 import numpy as np
 import pandas as pd
 from PIL import Image
+import json
 
 
 def _check_dir(path):
@@ -33,11 +34,11 @@ def load_hotels_data(path, directories=['train', 'test'],
 
     org_path = path
 
-    if os.path.exists(os.path.join(path, 'hotel50-image_label_train_test_merged.csv')):
+    if os.path.exists(os.path.join(path, 'hotel50-image_label_train.csv')):
         print('hehe')
         print('Found csv!')
 
-        dataset = pd.read_csv(os.path.join(path, 'hotel50-image_label_train_test_merged.csv'))
+        dataset = pd.read_csv(os.path.join(path, 'hotel50-image_label_train.csv'))
 
     else:
         print('File not found, creating csv...')
@@ -120,7 +121,10 @@ def load_hotels_data(path, directories=['train', 'test'],
         dataset = pd.DataFrame({'image': image_list, 'hotel_label': hotel_label_list, 'super_class': super_class_list,
                                 'is_website': cam_web_list, 'is_trianval': is_trainval_list})
         #dataset.to_csv(os.path.join(org_path, 'hotel50-image_label_train_test_merged.csv'), index=False, header=True)
-        dataset.to_csv(os.path.join('.', 'hotel50-image_label_train_test_merged.csv'), index=False, header=True)
+        dataset.to_csv(os.path.join('.', 'hotel50-image_label_train.csv'), index=False, header=True)
+        json.dump(hotels_chain_branch2lbl, open('hotels_chain_branch2lbl.json', 'w'))
+        json.dump(hotels_chain2lbl, open('hotels_chain_branch2lbl.json', 'w'))
+
 
     return dataset
 
@@ -359,7 +363,7 @@ def save_dataset(ls, data_path, name):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-p', '--path', default='../../dataset/hotels_v1/', help="path")
+    parser.add_argument('-p', '--path', default='../../dataset/hotels/', help="path")
     parser.add_argument('-th', '--threshold', type=int, default=15, help="threshold")
     parser.add_argument('-tu', '--test_unseen', type=int, default=1200, help="unseen_test")
     parser.add_argument('-vu', '--val_unseen', type=int, default=1000, help="unseen_val")
@@ -369,6 +373,8 @@ def main():
     args = parser.parse_args()
 
     df = load_hotels_data(args.path)
+
+    # print(len(df))
 
     create_splits(args, df)
 
