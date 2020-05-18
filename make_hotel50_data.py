@@ -25,7 +25,7 @@ def get_stats(l):
 
 
 def load_hotels_data(path, directories=['train', 'test'],
-                     path_directories={'train': 'train', 'test': 'test/unoccluded'}):
+                     path_directories={'train': 'train', 'test': 'test/unoccluded'}, maps=None):
     hotel_label_list = []
     cam_web_list = []
     image_list = []
@@ -43,8 +43,17 @@ def load_hotels_data(path, directories=['train', 'test'],
     else:
         print('File not found, creating csv...')
 
-        hotels_chain_branch2lbl = {}
-        hotels_chain2lbl = {}
+        if maps is None:
+            print('No maps found :(')
+            hotels_chain_branch2lbl = {}
+            hotels_chain2lbl = {}
+        else:
+            print('Maps found!!')
+            hotels_chain_branch2lbl = json.load(open(maps[0]))
+            hotels_chain2lbl = json.load(open(maps[0]))
+
+            hotels_chain_branch2lbl = {int(x): y for x, y in hotels_chain_branch2lbl.items()}
+            hotels_chain2lbl = {int(x): y for x, y in hotels_chain2lbl.items()}
 
         label = 0
         super_class = 0
@@ -120,11 +129,10 @@ def load_hotels_data(path, directories=['train', 'test'],
 
         dataset = pd.DataFrame({'image': image_list, 'hotel_label': hotel_label_list, 'super_class': super_class_list,
                                 'is_website': cam_web_list, 'is_trianval': is_trainval_list})
-        #dataset.to_csv(os.path.join(org_path, 'hotel50-image_label_train_test_merged.csv'), index=False, header=True)
+        # dataset.to_csv(os.path.join(org_path, 'hotel50-image_label_train_test_merged.csv'), index=False, header=True)
         dataset.to_csv(os.path.join('.', 'hotel50-image_label_train.csv'), index=False, header=True)
         json.dump(hotels_chain_branch2lbl, open('hotels_chain_branch2lbl.json', 'w'))
-        json.dump(hotels_chain2lbl, open('hotels_chain_branch2lbl.json', 'w'))
-
+        json.dump(hotels_chain2lbl, open('hotels_branch2lbl.json', 'w'))
 
     return dataset
 
@@ -372,11 +380,11 @@ def main():
 
     args = parser.parse_args()
 
-    df = load_hotels_data(args.path)
+    df = load_hotels_data(args.path, directories=['train'])
 
     # print(len(df))
 
-    create_splits(args, df)
+    # create_splits(args, df)
 
     # plot_sizes(args, df)
 
