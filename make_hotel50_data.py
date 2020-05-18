@@ -25,7 +25,7 @@ def get_stats(l):
 
 
 def load_hotels_data(path, directories=['train', 'test'],
-                     path_directories={'train': 'train', 'test': 'test/unoccluded'}, maps=None):
+                     path_directories={'train': 'train', 'test': 'test/unoccluded'}, maps=None, name='train'):
     hotel_label_list = []
     cam_web_list = []
     image_list = []
@@ -34,11 +34,11 @@ def load_hotels_data(path, directories=['train', 'test'],
 
     org_path = path
 
-    if os.path.exists(os.path.join(path, 'hotel50-image_label_train.csv')):
+    if os.path.exists(os.path.join(path, f'hotel50-image_label_{name}.csv')):
         print('hehe')
         print('Found csv!')
 
-        dataset = pd.read_csv(os.path.join(path, 'hotel50-image_label_train.csv'))
+        dataset = pd.read_csv(os.path.join(path, f'hotel50-image_label_{name}.csv'))
 
     else:
         print('File not found, creating csv...')
@@ -49,11 +49,11 @@ def load_hotels_data(path, directories=['train', 'test'],
             hotels_chain2lbl = {}
         else:
             print('Maps found!!')
-            hotels_chain_branch2lbl = json.load(open(maps[0]))
-            hotels_chain2lbl = json.load(open(maps[0]))
+            hotels_chain_branch2lbl = json.load(open(os.path.join(path, maps[0])))
+            hotels_chain2lbl = json.load(open(os.path.join(path, maps[1])))
 
-            hotels_chain_branch2lbl = {int(x): y for x, y in hotels_chain_branch2lbl.items()}
-            hotels_chain2lbl = {int(x): y for x, y in hotels_chain2lbl.items()}
+            # hotels_chain_branch2lbl = {int(x): y for x, y in hotels_chain_branch2lbl.items()}
+            # hotels_chain2lbl = {int(x): y for x, y in hotels_chain2lbl.items()}
 
         label = 0
         super_class = 0
@@ -80,6 +80,8 @@ def load_hotels_data(path, directories=['train', 'test'],
                     continue
 
                 if f_dir not in hotels_chain_branch2lbl.keys():
+                    if dir == 'test':
+                        raise Exception(f"{f_dir} not in hotels_chain_branch2lbl keys!")
                     hotels_chain_branch2lbl[f_dir] = {}
                     hotels_chain2lbl[f_dir] = super_class
                     super_class += 1
@@ -94,6 +96,8 @@ def load_hotels_data(path, directories=['train', 'test'],
                         continue
 
                     if s_dir not in hotels_chain_branch2lbl[f_dir].keys():
+                        if dir == 'test':
+                            raise Exception(f"{s_dir} not in in hotels_chain_branch2lbl[{f_dir}] keys!")
                         hotels_chain_branch2lbl[f_dir][s_dir] = label
                         label += 1
 
@@ -130,9 +134,10 @@ def load_hotels_data(path, directories=['train', 'test'],
         dataset = pd.DataFrame({'image': image_list, 'hotel_label': hotel_label_list, 'super_class': super_class_list,
                                 'is_website': cam_web_list, 'is_trianval': is_trainval_list})
         # dataset.to_csv(os.path.join(org_path, 'hotel50-image_label_train_test_merged.csv'), index=False, header=True)
-        dataset.to_csv(os.path.join('.', 'hotel50-image_label_train.csv'), index=False, header=True)
-        json.dump(hotels_chain_branch2lbl, open('hotels_chain_branch2lbl.json', 'w'))
-        json.dump(hotels_chain2lbl, open('hotels_branch2lbl.json', 'w'))
+        dataset.to_csv(os.path.join('.', f'hotel50-image_label_{name}.csv'), index=False, header=True)
+        if name == 'train':
+            json.dump(hotels_chain_branch2lbl, open('hotels_chain_branch2lbl.json', 'w'))
+            json.dump(hotels_chain2lbl, open('hotels_branch2lbl.json', 'w'))
 
     return dataset
 
@@ -376,11 +381,17 @@ def main():
     parser.add_argument('-tu', '--test_unseen', type=int, default=1200, help="unseen_test")
     parser.add_argument('-vu', '--val_unseen', type=int, default=1000, help="unseen_val")
     parser.add_argument('-v', '--version', type=int, default=0, help="version")
+    parser.add_argument('-hcb2l', '--hotels_chain_branch2lbl', default='hotels_chain_branch2lbl.json', help="hotels_chain_branch2lbl path")
+    parser.add_argument('-hb2l', '--hotels_branch2lbl', default='hotels_branch2lbl.json', help="hotels_branch2lbl path")
     parser.add_argument('-sv', '--save_version', type=int, default=1, help="save_version")
 
     args = parser.parse_args()
 
-    df = load_hotels_data(args.path, directories=['train'])
+    df = load_hotels_data(args.path, directories=['train'], name='train')
+    test_df = load_hotels_data(args.path, directories=['test'], maps=(args.hotels_chain_branch2lbl,
+                                                                      args.hotels_branch2lbl), name='test')
+
+
 
     # print(len(df))
 
