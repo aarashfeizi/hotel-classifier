@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 import json
-
+import random
 
 def _check_dir(path):
     return os.path.isdir(path)
@@ -215,18 +215,38 @@ def create_splits(args, df):
 
     lbls_unique_filtered = lbls_unique[lbls_count >= args.threshold]
 
+    lbls_unique_less_than_thresh = np.array(list(set(lbls_unique) - set(lbls_unique_filtered)), dtype=np.int64)
+
+    val_to_add = []
+    test_to_add = []
+
+    for l in lbls_unique_less_than_thresh:
+        if random.random() < 0.6:
+            test_to_add.append(l)
+        else:
+            val_to_add.append(l)
+
     pairs = []
+    filtered_out_pairs = []
 
     for p, l in all_pairs:
         if l in lbls_unique_filtered:
             pairs.append((p, l))
+        else:
+            filtered_out_pairs.append((p, l))
 
     test_unseen_lbls_u = np.random.choice(lbls_unique_filtered, args.test_unseen, replace=False)
+
+    test_unseen_lbls_u = np.concatenate([test_to_add, test_unseen_lbls_u])
 
     trainval_lbls = np.array(list(set(lbls_unique_filtered) - set(test_unseen_lbls_u)), dtype=np.int64)
 
     test_unseen = []
     for pair in pairs:
+        if pair[1] in test_unseen_lbls_u:
+            test_unseen.append(pair)
+
+    for pair in filtered_out_pairs:
         if pair[1] in test_unseen_lbls_u:
             test_unseen.append(pair)
 
@@ -260,9 +280,15 @@ def create_splits(args, df):
 
     val_unseen_lbls_u = np.random.choice(trainval_lbls, args.val_unseen, replace=False)
 
+    val_unseen_lbls_u = np.concatenate([val_to_add, val_unseen_lbls_u])
+
     val_unseen = []
 
     for pair in trainval_pairs:
+        if pair[1] in val_unseen_lbls_u:
+            val_unseen.append(pair)
+
+    for pair in filtered_out_pairs:
         if pair[1] in val_unseen_lbls_u:
             val_unseen.append(pair)
 
@@ -349,7 +375,10 @@ def create_splits(args, df):
     save_dataset(test_seen, data_path, 'test_seen')
     save_dataset(test_unseen, data_path, 'test_unseen')
 
-    _number_of_classes(data_path)
+    class_config = _number_of_classes(data_path)
+
+    with open(os.path.join(data_path, 'class_config.txt'), 'w') as f:
+        f.write(class_config)
 
 
 def _number_of_classes(datapath):
@@ -364,8 +393,13 @@ def _number_of_classes(datapath):
             csvs.append(df)
             names.append(dir[:-4])
 
+
+    s = ''
+
     for name, csv in zip(names, csvs):
         print(name, "number of classes:", len(np.unique(list(csv.label))))
+        s += name + " number of classes: " + str(len(np.unique(list(csv.label)))) + '\n'
+    return s
 
 
 def save_dataset(ls, data_path, name):
@@ -378,8 +412,8 @@ def main():
 
     parser.add_argument('-p', '--path', default='../../dataset/hotels/', help="path")
     parser.add_argument('-th', '--threshold', type=int, default=15, help="threshold")
-    parser.add_argument('-tu', '--test_unseen', type=int, default=1200, help="unseen_test")
-    parser.add_argument('-vu', '--val_unseen', type=int, default=1000, help="unseen_val")
+    parser.add_argument('-tu', '--test_unseen', type=int, default=4000, help="unseen_test")
+    parser.add_argument('-vu', '--val_unseen', type=int, default=4000, help="unseen_val")
     parser.add_argument('-v', '--version', type=int, default=0, help="version")
     parser.add_argument('-hcb2l', '--hotels_chain_branch2lbl', default='hotels_chain_branch2lbl.json', help="hotels_chain_branch2lbl path")
     parser.add_argument('-hb2l', '--hotels_branch2lbl', default='hotels_branch2lbl.json', help="hotels_branch2lbl path")
@@ -387,15 +421,16 @@ def main():
 
     args = parser.parse_args()
 
-    df = load_hotels_data(args.path, directories=['train'], name='train')
+    train_df = load_hotels_data(args.path, directories=['train'], name='train')
     test_df = load_hotels_data(args.path, directories=['test'], maps=(args.hotels_chain_branch2lbl,
                                                                       args.hotels_branch2lbl), name='test')
 
-
+    all = [train_df, test_df]
+    df = pd.concat(all)
 
     # print(len(df))
 
-    # create_splits(args, df)
+    create_splits(args, df)
 
     # plot_sizes(args, df)
 

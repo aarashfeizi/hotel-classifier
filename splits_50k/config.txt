@@ -1,0 +1,21 @@
+unseen test: 195534
+unseen test min in classes: 4
+unseen test max in classes: 307
+seen test: 160450
+seen test min in classes: 5
+seen test max in classes: 5
+Total test set: 355984
+******************************
+unseen val: 148973
+unseen val min in classes: 4
+unseen val max in classes: 469
+seen val: 140450
+seen val min in classes: 5
+seen val max in classes: 5
+Total val set: 289423
+******************************
+Total train set: 494976
+train min in classes: 5
+train max in classes: 387
+******************************
+Total trainval set: 784399

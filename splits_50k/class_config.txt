@@ -1,0 +1,5 @@
+hotels_val_seen number of classes: 28090
+hotels_val_unseen number of classes: 9611
+hotels_train number of classes: 28090
+hotels_test_seen number of classes: 32090
+hotels_test_unseen number of classes: 12299

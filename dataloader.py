@@ -412,7 +412,7 @@ class HotelTrain(Dataset):
 
         self.datas, self.num_classes, self.length, self.labels = loadDataToMem(args.dataset_path, args.dataset_name,
                                                                                args.dataset_split_type,
-                                                                               mode=mode, split_file_name='splits0_1')
+                                                                               mode=mode, split_file_name='splits_50k')
 
         self.shuffled_data = get_shuffled_data(datas=self.datas, seed=args.seed)
 
@@ -471,7 +471,7 @@ class HotelTest(Dataset):
 
         self.datas, self.num_classes, _, self.labels = loadDataToMem(args.dataset_path, args.dataset_name,
                                                                      args.dataset_split_type, mode=mode,
-                                                                     split_file_name='splits0_1')
+                                                                     split_file_name='splits_50k')
 
         print(f'hotel {mode} classes: ', self.num_classes)
         print(f'hotel {mode} length: ', self.__len__())
