@@ -11,3 +11,4 @@ logs/
 new_logs/
 new_logs_hotels/
 *.json
+hotels_trainval/

@@ -22,7 +22,8 @@ def main():
     val_seen = pd.read_csv(os.path.join(split_path, 'hotels_val_seen.csv'))
     val_unseen = pd.read_csv(os.path.join(split_path, 'hotels_val_unseen.csv'))
 
-    os.mkdir(save_path)
+    # os.mkdir(save_path)
+
     # os.mkdir(os.path.join(save_path, 'train'))
     # os.mkdir(os.path.join(save_path, 'train/travel_website'))
     # os.mkdir(os.path.join(save_path, 'train/trafficcam'))
@@ -52,14 +53,16 @@ def main():
         length = len(datasplit_path)
         for i, p in enumerate(datasplit_path):
             print(datasplit_name, ':', ((i + 1) / length))
-            try:
-                img = Image.open(os.path.join(data_path, p))
-                img_dirs = p.split('/')[:-1]
-                if not os.path.exists(os.path.join(save_path, *img_dirs)):
-                    os.makedirs(os.path.join(save_path, *img_dirs))
-                img.save(os.path.join(save_path, p))
-            except Exception as e:
-                print('Bad: ', p)
+            img_dirs = p.split('/')[:-1]
+            if os.path.exists(os.path.join(save_path, p)):
+                if img_dirs[1] != 'train':
+                    print('Bad:', p)
+                    raise Exception('Should have all of train!')
+                continue
+            img = Image.open(os.path.join(data_path, p))  # should not get exception
+            if not os.path.exists(os.path.join(save_path, *img_dirs)):
+                os.makedirs(os.path.join(save_path, *img_dirs))
+            img.save(os.path.join(save_path, p))
 
 
 if __name__ == '__main__':
