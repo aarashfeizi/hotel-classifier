@@ -55,7 +55,8 @@ def main():
             try:
                 img = Image.open(os.path.join(data_path, p))
                 img_dirs = p.split('/')[:-1]
-                os.makedirs(os.path.join(save_path, *img_dirs))
+                if not os.path.exists(os.path.join(save_path, *img_dirs)):
+                    os.makedirs(os.path.join(save_path, *img_dirs))
                 img.save(os.path.join(save_path, p))
             except Exception as e:
                 print('Bad: ', p)
