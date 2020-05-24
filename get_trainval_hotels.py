@@ -55,10 +55,11 @@ def main():
             print(datasplit_name, ':', ((i + 1) / length))
             img_dirs = p.split('/')[:-1]
             if os.path.exists(os.path.join(save_path, p)):
-                if img_dirs[1] != 'train':
-                    print('Bad:', p)
-                    raise Exception('Should have all of train!')
+                print('cont:', p)
                 continue
+            if img_dirs[1] != 'train':
+                print('Bad:', p)
+                raise Exception('Should have all of train!')
             img = Image.open(os.path.join(data_path, p))  # should not get exception
             if not os.path.exists(os.path.join(save_path, *img_dirs)):
                 os.makedirs(os.path.join(save_path, *img_dirs))
