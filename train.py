@@ -93,12 +93,13 @@ def main():
     test_loaders = []
     val_loaders = []
 
-    if args.dataset_split_type == 'original':
-        test_loaders.append(DataLoader(test_set, batch_size=args.way, shuffle=False, num_workers=args.workers))
+    if args.test:
+        if args.dataset_split_type == 'original':
+            test_loaders.append(DataLoader(test_set, batch_size=args.way, shuffle=False, num_workers=args.workers))
 
-    elif args.dataset_split_type == 'new':
-        test_loaders.append(DataLoader(test_set_known, batch_size=args.way, shuffle=False, num_workers=args.workers))
-        test_loaders.append(DataLoader(test_set_unknown, batch_size=args.way, shuffle=False, num_workers=args.workers))
+        elif args.dataset_split_type == 'new':
+            test_loaders.append(DataLoader(test_set_known, batch_size=args.way, shuffle=False, num_workers=args.workers))
+            test_loaders.append(DataLoader(test_set_unknown, batch_size=args.way, shuffle=False, num_workers=args.workers))
 
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
@@ -113,7 +114,8 @@ def main():
             val_loaders.append(
                 DataLoader(val_set_unknown, batch_size=args.way, shuffle=False, num_workers=args.workers))
     else:
-        val_loaders = test_loaders
+        val_loaders = None
+        raise Exception('No validation data is set!')
 
     loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean')
 
