@@ -57,7 +57,7 @@ def main():
             if os.path.exists(os.path.join(save_path, p)):
                 print('cont:', p)
                 continue
-            if img_dirs[1] != 'train':
+            if img_dirs[1] == 'train':
                 print('Bad:', p)
                 raise Exception('Should have all of train!')
             img = Image.open(os.path.join(data_path, p))  # should not get exception

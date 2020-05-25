@@ -77,10 +77,11 @@ def main():
 
         train_set = HotelTrain(args, transform=data_transforms, mode='train')
         val_set_known = HotelTest(args, transform=data_transforms, mode='val_seen')
-        test_set_known = HotelTest(args, transform=data_transforms, mode='test_seen')
         val_set_unknown = HotelTest(args, transform=data_transforms, mode='val_unseen')
-        test_set_unknown = HotelTest(args, transform=data_transforms, mode='test_unseen')
 
+        if args.test:
+            test_set_known = HotelTest(args, transform=data_transforms, mode='test_seen')
+            test_set_unknown = HotelTest(args, transform=data_transforms, mode='test_unseen')
 
     else:
         print('Fuck: ', args.dataset_name)
@@ -174,7 +175,7 @@ def main():
         if args.dataset_split_type == 'new':
             model_methods_top.test_fewshot(args, tm_net, test_loaders[0], loss_fn, comment='known')
             model_methods_top.test_fewshot(args, tm_net, test_loaders[1], loss_fn, comment='unknown')
-        else: # original
+        else:  # original
             model_methods_top.test_fewshot(args, tm_net, test_loaders[0], loss_fn)
     else:
         logger.info("NO TESTING DONE.")

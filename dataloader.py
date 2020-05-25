@@ -54,15 +54,23 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
     if dataset_name == 'cub':
         dataset_path = os.path.join(dataPath, 'CUB')
     elif dataset_name == 'hotels':
-        dataset_path = os.path.join(dataPath, 'hotels')
+        dataset_path = os.path.join(dataPath, 'hotels_trainval')
+
+    background_datasets = {'val_seen': 'val_unseen',
+                           'val_unseen': 'val_seen',
+                           'test_seen': 'test_unseen',
+                           'test_unseen': 'test_seen'}
 
     print("begin loading dataset to memory")
     datas = {}
+    datas_bg = {}  # in case of mode == val/test_seen/unseen
 
     if split_type == 'original':
         image_path, image_labels = _read_org_split(dataset_path, mode)
     elif split_type == 'new':
         image_path, image_labels = _read_new_split(os.path.join(dataset_path, split_file_name), mode, dataset_name)
+        if mode != 'train':
+            image_path_bg, image_labels_bg = _read_new_split(os.path.join(dataset_path, split_file_name), background_datasets[mode], dataset_name)
 
     num_instances = len(image_labels)
 
@@ -71,12 +79,29 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
     for idx, path in zip(image_labels, image_path):
         if idx not in datas.keys():
             datas[idx] = []
+            if mode != 'train':
+                datas_bg[idx] = []
+
         datas[idx].append(os.path.join(dataset_path, path))
+        if mode != 'train':
+            datas_bg[idx].append(os.path.join(dataset_path, path))
+
+    if mode != 'train':
+        for idx, path in zip(image_labels_bg, image_path_bg):
+            if idx not in datas.keys():
+                datas_bg[idx] = []
+            datas_bg[idx].append(os.path.join(dataset_path, path))
 
     labels = np.unique(image_labels)
+    print(f'Number of labels in {mode}: ', len(labels))
 
-    print("finish loading dataset to memory")
-    return datas, num_classes, num_instances, labels
+    if mode != 'train':
+        all_labels = np.unique(np.concatenate((image_labels, image_labels_bg)))
+        print(f'Number of all labels (bg + fg) in {mode} and {background_datasets[mode]}: ', len(all_labels))
+
+
+    print(f'finish loading {mode} dataset to memory')
+    return datas, num_classes, num_instances, labels, datas_bg
 
 
 def get_shuffled_data(datas, seed=0):  # for sequential labels only
@@ -106,7 +131,7 @@ class CUBTrain_Top(Dataset):
         np.random.seed(args.seed)
         # self.dataset = dataset
         self.transform = transform
-        self.datas, self.num_classes, self.length, self.labels = loadDataToMem(args.dataset_path, args.dataset_name,
+        self.datas, self.num_classes, self.length, self.labels, _ = loadDataToMem(args.dataset_path, args.dataset_name,
                                                                                args.dataset_split_type,
                                                                                mode=mode)
 
@@ -184,8 +209,8 @@ class CUBTest_Fewshot(Dataset):
         self.way = args.way
         self.img1 = None
         self.c1 = None
-        self.datas, self.num_classes, _, self.labels = loadDataToMem(args.dataset_path, args.dataset_name,
-                                                                     args.dataset_split_type, mode=mode)
+        self.datas, self.num_classes, _, self.labels, _ = loadDataToMem(args.dataset_path, args.dataset_name,
+                                                                     args.dataset_split_type, mode=mode) # todo not updated
 
     def __len__(self):
         return self.times * self.way
@@ -217,7 +242,7 @@ class CUBClassification(Dataset):
         super(CUBClassification, self).__init__()
         np.random.seed(args.seed)
         self.transform = transform
-        self.datas, self.num_classes, self.length, self.labels = loadDataToMem(args.dataset_path, args.dataset_name,
+        self.datas, self.num_classes, self.length, self.labels, _ = loadDataToMem(args.dataset_path, args.dataset_name,
                                                                                args.dataset_split_type,
                                                                                mode=mode)
         self.shuffled_data = get_shuffled_data(self.datas, seed=args.seed)
@@ -410,7 +435,7 @@ class HotelTrain(Dataset):
         np.random.seed(args.seed)
         self.transform = transform
 
-        self.datas, self.num_classes, self.length, self.labels = loadDataToMem(args.dataset_path, args.dataset_name,
+        self.datas, self.num_classes, self.length, self.labels, _ = loadDataToMem(args.dataset_path, args.dataset_name,
                                                                                args.dataset_split_type,
                                                                                mode=mode, split_file_name='splits_50k')
 
@@ -469,7 +494,7 @@ class HotelTest(Dataset):
         self.img1 = None
         self.c1 = None
 
-        self.datas, self.num_classes, _, self.labels = loadDataToMem(args.dataset_path, args.dataset_name,
+        self.datas, self.num_classes, _, self.labels, self.datas_bg = loadDataToMem(args.dataset_path, args.dataset_name,
                                                                      args.dataset_split_type, mode=mode,
                                                                      split_file_name='splits_50k')
 
@@ -489,10 +514,10 @@ class HotelTest(Dataset):
             img2 = Image.open(random.choice(self.datas[self.c1])).convert('RGB')
         # generate image pair from different class
         else:
-            c2 = self.labels[random.randint(0, self.num_classes - 1)]
+            c2 = list(self.datas_bg.keys())[random.randint(0, len(self.datas_bg.keys()) - 1)]
             while self.c1 == c2:
-                c2 = self.labels[random.randint(0, self.num_classes - 1)]
-            img2 = Image.open(random.choice(self.datas[c2])).convert('RGB')
+                c2 = list(self.datas_bg.keys())[random.randint(0, len(self.datas_bg.keys()) - 1)]
+            img2 = Image.open(random.choice(self.datas_bg[c2])).convert('RGB')
 
         if self.transform:
             img1 = self.transform(self.img1)
