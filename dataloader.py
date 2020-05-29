@@ -43,13 +43,14 @@ def _read_new_split(dataset_path, mode,
     file_name = f'{dataset_name}_' + mode + '.csv'
 
     file = pd.read_csv(os.path.join(dataset_path, file_name))
-    image_labels = list(file.label)
-    image_path = list(file.image)
+    image_labels = np.array(file.label)
+    image_path = np.array(file.image)
 
     return image_path, image_labels
 
 
-def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_name='final_newsplits0_1'):
+def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_name='final_newsplits0_1',
+                  portion=False):
     print(split_file_name, '!!!!!!!!')
     if dataset_name == 'cub':
         dataset_path = os.path.join(dataPath, 'CUB')
@@ -70,7 +71,23 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
     elif split_type == 'new':
         image_path, image_labels = _read_new_split(os.path.join(dataset_path, split_file_name), mode, dataset_name)
         if mode != 'train':
-            image_path_bg, image_labels_bg = _read_new_split(os.path.join(dataset_path, split_file_name), background_datasets[mode], dataset_name)
+            image_path_bg, image_labels_bg = _read_new_split(os.path.join(dataset_path, split_file_name),
+                                                             background_datasets[mode], dataset_name)
+
+    if portion:
+        image_path = image_path[image_labels < 10000]
+        image_labels = image_labels[image_labels < 10000]
+
+        if mode != 'train':
+            image_path_bg = image_path_bg[image_labels_bg < 10000]
+            image_labels_bg = image_labels_bg[image_labels_bg < 10000]
+
+    print(f'{mode} number of imgs:', len(image_labels))
+    print(f'{mode} number of labels:', len(np.unique(image_labels)))
+
+    if mode != 'train':
+        print(f'{mode} number of bg imgs:', len(image_labels_bg))
+        print(f'{mode} number of bg lbls:', len(np.unique(image_labels_bg)))
 
     num_instances = len(image_labels)
 
@@ -98,7 +115,6 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
     if mode != 'train':
         all_labels = np.unique(np.concatenate((image_labels, image_labels_bg)))
         print(f'Number of all labels (bg + fg) in {mode} and {background_datasets[mode]}: ', len(all_labels))
-
 
     print(f'finish loading {mode} dataset to memory')
     return datas, num_classes, num_instances, labels, datas_bg
@@ -132,8 +148,8 @@ class CUBTrain_Top(Dataset):
         # self.dataset = dataset
         self.transform = transform
         self.datas, self.num_classes, self.length, self.labels, _ = loadDataToMem(args.dataset_path, args.dataset_name,
-                                                                               args.dataset_split_type,
-                                                                               mode=mode)
+                                                                                  args.dataset_split_type,
+                                                                                  mode=mode)
 
         self.shuffled_data = get_shuffled_data(datas=self.datas, seed=args.seed)
 
@@ -210,7 +226,8 @@ class CUBTest_Fewshot(Dataset):
         self.img1 = None
         self.c1 = None
         self.datas, self.num_classes, _, self.labels, _ = loadDataToMem(args.dataset_path, args.dataset_name,
-                                                                     args.dataset_split_type, mode=mode) # todo not updated
+                                                                        args.dataset_split_type,
+                                                                        mode=mode)  # todo not updated
 
     def __len__(self):
         return self.times * self.way
@@ -243,8 +260,8 @@ class CUBClassification(Dataset):
         np.random.seed(args.seed)
         self.transform = transform
         self.datas, self.num_classes, self.length, self.labels, _ = loadDataToMem(args.dataset_path, args.dataset_name,
-                                                                               args.dataset_split_type,
-                                                                               mode=mode)
+                                                                                  args.dataset_split_type,
+                                                                                  mode=mode)
         self.shuffled_data = get_shuffled_data(self.datas, seed=args.seed)
         # import pdb
         # pdb.set_trace()
@@ -436,8 +453,10 @@ class HotelTrain(Dataset):
         self.transform = transform
 
         self.datas, self.num_classes, self.length, self.labels, _ = loadDataToMem(args.dataset_path, args.dataset_name,
-                                                                               args.dataset_split_type,
-                                                                               mode=mode, split_file_name='splits_50k')
+                                                                                  args.dataset_split_type,
+                                                                                  mode=mode,
+                                                                                  split_file_name='splits_50k',
+                                                                                  portion=args.portion)
 
         self.shuffled_data = get_shuffled_data(datas=self.datas, seed=args.seed)
 
@@ -494,9 +513,11 @@ class HotelTest(Dataset):
         self.img1 = None
         self.c1 = None
 
-        self.datas, self.num_classes, _, self.labels, self.datas_bg = loadDataToMem(args.dataset_path, args.dataset_name,
-                                                                     args.dataset_split_type, mode=mode,
-                                                                     split_file_name='splits_50k')
+        self.datas, self.num_classes, _, self.labels, self.datas_bg = loadDataToMem(args.dataset_path,
+                                                                                    args.dataset_name,
+                                                                                    args.dataset_split_type, mode=mode,
+                                                                                    split_file_name='splits_50k',
+                                                                                    portion=args.portion)
 
         print(f'hotel {mode} classes: ', self.num_classes)
         print(f'hotel {mode} length: ', self.__len__())
