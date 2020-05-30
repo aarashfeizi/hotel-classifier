@@ -415,36 +415,36 @@ class OmniglotTest(Dataset):
         return img1, img2
 
 
-def loadHotels(dataset_path, dataset_name, mode='train'):
-    if dataset_name == 'hotels':
-        dataset_path = os.path.join(dataset_path, 'hotels')
-
-    with open(os.path.join(dataset_path, 'hotel50-image_label.csv')) as f:
-        hotels = pd.read_csv(f)
-    with open(os.path.join(dataset_path, 'background_or_novel.csv')) as f:
-        b_or_n = pd.read_csv(f)
-
-    train = (mode == 'train')
-
-    if train:
-        label_list = list(b_or_n[b_or_n['background'] == 1]['label'])  # for background classes
-    else:
-        label_list = list(b_or_n[b_or_n['background'] == 0]['label'])  # for novel classses
-
-    datas = {}
-    length = 0
-    for idx, row in hotels.iterrows():
-        if row['hotel_label'] in label_list:
-            lbl = row['hotel_label']
-            if lbl not in datas.keys():
-                datas[lbl] = []
-            datas[lbl].append(os.path.join(dataset_path, row['image']))
-
-    for _, value in datas.items():
-        length += len(value)
-
-    return datas, len(label_list), length, label_list
-
+# def loadHotels(dataset_path, dataset_name, mode='train'):
+#     if dataset_name == 'hotels':
+#         dataset_path = os.path.join(dataset_path, 'hotels')
+#
+#     with open(os.path.join(dataset_path, 'hotel50-image_label.csv')) as f:
+#         hotels = pd.read_csv(f)
+#     with open(os.path.join(dataset_path, 'background_or_novel.csv')) as f:
+#         b_or_n = pd.read_csv(f)
+#
+#     train = (mode == 'train')
+#
+#     if train:
+#         label_list = list(b_or_n[b_or_n['background'] == 1]['label'])  # for background classes
+#     else:
+#         label_list = list(b_or_n[b_or_n['background'] == 0]['label'])  # for novel classses
+#
+#     datas = {}
+#     length = 0
+#     for idx, row in hotels.iterrows():
+#         if row['hotel_label'] in label_list:
+#             lbl = row['hotel_label']
+#             if lbl not in datas.keys():
+#                 datas[lbl] = []
+#             datas[lbl].append(os.path.join(dataset_path, row['image']))
+#
+#     for _, value in datas.items():
+#         length += len(value)
+#
+#     return datas, len(label_list), length, label_list
+#
 
 class HotelTrain(Dataset):
     def __init__(self, args, transform=None, mode='train'):
@@ -500,6 +500,29 @@ class HotelTrain(Dataset):
             image1 = self.transform(image1)
             image2 = self.transform(image2)
         return image1, image2, torch.from_numpy(np.array([label], dtype=np.float32))
+
+    def _get_single_item(self, index):
+        label, image_path = self.shuffled_data[index]
+
+        image = Image.open(image_path)
+
+        image = image.convert('RGB')
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image, torch.from_numpy(np.array(label, dtype=np.float32))
+
+    def get_k_samples(self, k=100):
+        ks = np.random.randint(len(self.shuffled_data), size=k)
+        imgs = []
+        lbls = []
+        for i in ks:
+            img, lbl = self._get_single_item(i)
+            imgs.append(img)
+            lbls.append(lbl)
+
+        return imgs, lbls
 
 
 class HotelTest(Dataset):
