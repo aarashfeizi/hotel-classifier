@@ -154,7 +154,6 @@ def main():
         workers = best_num_worker[1]
         pin_memory = True
     ###
-    input('We\'re done!')
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=False, num_workers=workers,
                               pin_memory=pin_memory)
 
