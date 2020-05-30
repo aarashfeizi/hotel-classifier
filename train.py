@@ -118,7 +118,7 @@ def main():
             train_set, batch_size=args.batch_size, shuffle=False, **kwargs)
         start = time.time()
         for epoch in range(4):
-            for batch_idx, (data, target) in enumerate(train_loader):
+            for batch_idx, (_, _, _) in enumerate(train_loader):
                 if batch_idx == 15:
                     break
                 pass
