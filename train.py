@@ -102,7 +102,7 @@ def main():
                 DataLoader(test_set_known, batch_size=args.way, shuffle=False, num_workers=args.workers))
             test_loaders.append(
                 DataLoader(test_set_unknown, batch_size=args.way, shuffle=False, num_workers=args.workers))
-###
+    ###
     import time
     import multiprocessing
     use_cuda = torch.cuda.is_available()
@@ -147,23 +147,30 @@ def main():
                 break
     if best_time[0] < best_time[1]:
         print("Best num_workers =", best_num_worker[0], "with pin_memory = False")
+        workers = best_num_worker[0]
+        pin_memory = False
     else:
         print("Best num_workers =", best_num_worker[1], "with pin_memory = True")
-    return
-###
+        workers = best_num_worker[1]
+        pin_memory = True
+    ###
     input('We\'re done!')
-    train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=False, num_workers=workers,
+                              pin_memory=pin_memory)
 
     if (val_set is not None) or (val_set_known is not None):
 
         if args.dataset_split_type == 'original':
-            val_loaders.append(DataLoader(val_set, batch_size=args.way, shuffle=False, num_workers=args.workers))
+            val_loaders.append(DataLoader(val_set, batch_size=args.way, shuffle=False, num_workers=workers,
+                              pin_memory=pin_memory))
 
         elif args.dataset_split_type == 'new':
             val_loaders.append(
-                DataLoader(val_set_known, batch_size=args.way, shuffle=False, num_workers=args.workers))
+                DataLoader(val_set_known, batch_size=args.way, shuffle=False, num_workers=workers,
+                              pin_memory=pin_memory))
             val_loaders.append(
-                DataLoader(val_set_unknown, batch_size=args.way, shuffle=False, num_workers=args.workers))
+                DataLoader(val_set_unknown, batch_size=args.way, shuffle=False, num_workers=workers,
+                              pin_memory=pin_memory))
     else:
         val_loaders = None
         raise Exception('No validation data is set!')
