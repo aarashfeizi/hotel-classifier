@@ -50,7 +50,7 @@ def _read_new_split(dataset_path, mode,
 
 
 def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_name='final_newsplits0_1',
-                  portion=False):
+                  portion=0):
     print(split_file_name, '!!!!!!!!')
     if dataset_name == 'cub':
         dataset_path = os.path.join(dataPath, 'CUB')
@@ -74,13 +74,13 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
             image_path_bg, image_labels_bg = _read_new_split(os.path.join(dataset_path, split_file_name),
                                                              background_datasets[mode], dataset_name)
 
-    if portion:
-        image_path = image_path[image_labels < 10000]
-        image_labels = image_labels[image_labels < 10000]
+    if portion > 0:
+        image_path = image_path[image_labels < portion]
+        image_labels = image_labels[image_labels < portion]
 
         if mode != 'train':
-            image_path_bg = image_path_bg[image_labels_bg < 10000]
-            image_labels_bg = image_labels_bg[image_labels_bg < 10000]
+            image_path_bg = image_path_bg[image_labels_bg < portion]
+            image_labels_bg = image_labels_bg[image_labels_bg < portion]
 
     print(f'{mode} number of imgs:', len(image_labels))
     print(f'{mode} number of labels:', len(np.unique(image_labels)))
