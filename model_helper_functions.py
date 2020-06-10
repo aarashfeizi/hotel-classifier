@@ -413,10 +413,9 @@ class ModelMethods:
 
         test_classes = np.zeros(((len(data_loader.dataset))))
         test_paths = np.empty(dtype='S20', shape=((len(data_loader.dataset))))
-        test_feats = np.zeros((len(data_loader.dataset), 256))
+        test_feats = np.zeros((len(data_loader.dataset), 512))
 
         for idx, (img, lbl, path) in enumerate(data_loader):
-            print(img.shape)
 
             if args.cuda:
                 img = img.cuda()

@@ -14,3 +14,4 @@ new_logs_hotels/
 hotels_trainval/
 dummy_splits_50k
 dummy_*
+*.h5
