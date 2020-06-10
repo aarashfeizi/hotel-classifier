@@ -217,7 +217,7 @@ class ModelMethods:
                 self.writer.add_scalar('Train/Acc', metric.get_acc(), epoch)
                 self.writer.flush()
 
-                if False and (val_loaders is not None and epoch % args.test_freq == 0):
+                if val_loaders is not None and epoch % args.test_freq == 0:
                     net.eval()
 
                     val_acc_unknwn, val_acc_knwn = -1, -1
