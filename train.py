@@ -115,9 +115,9 @@ def main():
             test_loaders.append(
                 DataLoader(test_set_unknown, batch_size=args.way, shuffle=False, num_workers=args.workers))
 
-    workers = 4
-    pin_memory = False
-    # workers, pin_memory = utils.get_best_workers_pinmememory(args, train_set)
+    # workers = 4
+    # pin_memory = False
+    workers, pin_memory = utils.get_best_workers_pinmememory(args, train_set)
 
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=False, num_workers=workers,
                               pin_memory=pin_memory)
