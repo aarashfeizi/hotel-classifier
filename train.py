@@ -117,7 +117,11 @@ def main():
 
     # workers = 4
     # pin_memory = False
-    workers, pin_memory = utils.get_best_workers_pinmememory(args, train_set)
+    if args.find_best_workers:
+        workers, pin_memory = utils.get_best_workers_pinmememory(args, train_set)
+    else:
+        workers = args.workers
+        pin_memory = False
 
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=False, num_workers=workers,
                               pin_memory=pin_memory)

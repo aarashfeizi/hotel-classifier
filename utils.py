@@ -173,6 +173,7 @@ def get_args():
     parser.add_argument('-w', '--way', default=20, type=int, help="how much way one-shot learning")
     parser.add_argument('-t', '--times', default=400, type=int, help="number of samples to test accuracy")
     parser.add_argument('-wr', '--workers', default=4, type=int, help="number of dataLoader workers")
+    parser.add_argument('-fbw', '--find_best_workers', default=False, action='store_true')
     parser.add_argument('-bs', '--batch_size', default=128, type=int, help="number of batch size")
     parser.add_argument('-dbb', '--db_batch', default=128, type=int, help="number of batch size for db")
     parser.add_argument('-lr', '--lr', default=0.00006, type=float, help="learning rate")
