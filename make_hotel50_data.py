@@ -135,9 +135,10 @@ def load_hotels_data(path, directories=['train', 'test'],
                                 'is_website': cam_web_list, 'is_trianval': is_trainval_list})
         # dataset.to_csv(os.path.join(org_path, 'hotel50-image_label_train_test_merged.csv'), index=False, header=True)
         dataset.to_csv(os.path.join('.', f'hotel50-image_label_{name}.csv'), index=False, header=True)
+        print(os.path.join(path, 'hotels_chain_branch2lbl.json'))
         if name == 'train':
-            json.dump(hotels_chain_branch2lbl, open('hotels_chain_branch2lbl.json', 'w'))
-            json.dump(hotels_chain2lbl, open('hotels_branch2lbl.json', 'w'))
+            json.dump(hotels_chain_branch2lbl, open(os.path.join(org_path, 'hotels_chain_branch2lbl.json'), 'w'))
+            json.dump(hotels_chain2lbl, open(os.path.join(org_path, 'hotels_branch2lbl.json'), 'w'))
 
     return dataset
 

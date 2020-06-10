@@ -217,7 +217,7 @@ class ModelMethods:
                 self.writer.add_scalar('Train/Acc', metric.get_acc(), epoch)
                 self.writer.flush()
 
-                if val_loaders is not None and epoch % args.test_freq == 0:
+                if False and (val_loaders is not None and epoch % args.test_freq == 0):
                     net.eval()
 
                     val_acc_unknwn, val_acc_knwn = -1, -1
@@ -296,11 +296,11 @@ class ModelMethods:
             acc += d
         print("#" * 70)
         print('queue len: ', len(queue))
-        print("final accuracy with train_losses: ", acc / len(queue))
 
-        print("Start projecting")
-        self._tb_project_embeddings(args, net.ft_net, train_loader, 1000)
-        print("Projecting done")
+        if args.project_tb:
+            print("Start projecting")
+            # self._tb_project_embeddings(args, net.ft_net, train_loader, 1000)
+            print("Projecting done")
 
         return net, best_model
 
@@ -395,6 +395,53 @@ class ModelMethods:
         self.writer.flush()
 
         return tests_right, tests_error, test_acc
+
+    def make_emb_db(self, args, net, data_loader, val=False, batch_size=None):
+        """
+
+        :param args: utils args
+        :param net: trained top_model network
+        :param data_loader: DataLoader object
+        :param val: validation or not
+        :return: None
+        """
+        net.eval()
+        if batch_size is None:
+            batch_size = args.batch_size
+
+        steps = int(np.ceil(len(data_loader) / batch_size))
+
+        test_classes = np.zeros(((len(data_loader.dataset))))
+        test_paths = np.empty(dtype='S20', shape=((len(data_loader.dataset))))
+        test_feats = np.zeros((len(data_loader.dataset), 256))
+
+        for idx, (img, lbl, path) in enumerate(data_loader):
+            print(img.shape)
+
+            if args.cuda:
+                img = img.cuda()
+            img = Variable(img)
+
+            output = net.forward(img, None, single=True)
+            output = output.data.cpu().numpy()
+
+            end = min((idx + 1) * batch_size, len(test_feats))
+
+            test_feats[idx * batch_size:end, :] = output
+            test_classes[idx * batch_size:end] = lbl
+            test_paths[idx * batch_size:end] = path
+
+            import pdb
+            # pdb.set_trace()
+
+        utils.save_h5('test_ids', test_paths, 'S20', 'testIds.h5')
+        utils.save_h5('test_classes', test_classes, 'i8', 'testClasses.h5')
+        utils.save_h5('test_feats', test_feats, 'f', 'testFeats.h5')
+
+        test_feats = utils.load_h5('test_feats', 'testFeats.h5')
+        test_classes = utils.load_h5('test_classes', 'testClasses.h5')
+
+        utils.get_distance(test_feats, test_classes, logger=self.logger)
 
     def load_model(self, args, net, best_model):
         checkpoint = torch.load(os.path.join(self.save_path, best_model))

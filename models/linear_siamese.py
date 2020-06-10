@@ -19,8 +19,11 @@ class LiSiamese(nn.Module):
             x = self.layer1(x)
         return x
 
-    def forward(self, x1, x2):
+    def forward(self, x1, x2, single=False):
         out1 = self.forward_one(x1)
+        if single:
+            return out1
+
         out2 = self.forward_one(x2)
         dis = torch.abs(out1 - out2)
         out = self.out(dis)

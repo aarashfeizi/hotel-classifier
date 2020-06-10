@@ -12,3 +12,5 @@ new_logs/
 new_logs_hotels/
 *.json
 hotels_trainval/
+dummy_splits_50k
+dummy_*

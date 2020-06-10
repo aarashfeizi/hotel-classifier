@@ -50,7 +50,7 @@ def _read_new_split(dataset_path, mode,
 
 
 def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_name='final_newsplits0_1',
-                  portion=0):
+                  portion=0, return_paths=False):
     print(split_file_name, '!!!!!!!!')
     if dataset_name == 'cub':
         dataset_path = os.path.join(dataPath, 'CUB')
@@ -103,9 +103,10 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
         if mode != 'train':
             datas_bg[idx].append(os.path.join(dataset_path, path))
 
+
     if mode != 'train':
         for idx, path in zip(image_labels_bg, image_path_bg):
-            if idx not in datas.keys():
+            if idx not in datas_bg.keys():
                 datas_bg[idx] = []
             datas_bg[idx].append(os.path.join(dataset_path, path))
 
@@ -120,19 +121,24 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
     return datas, num_classes, num_instances, labels, datas_bg
 
 
-def get_shuffled_data(datas, seed=0):  # for sequential labels only
+def get_shuffled_data(datas, seed=0, one_hot=True):  # for sequential labels only
 
     labels = sorted(datas.keys())
 
-    lbl2idx = {labels[idx]: idx for idx in range(len(labels))}
-
-    one_hot_labels = np.eye(len(np.unique(labels)))
+    if one_hot:
+        lbl2idx = {labels[idx]: idx for idx in range(len(labels))}
+        one_hot_labels = np.eye(len(np.unique(labels)))
     # print(one_hot_labels)
 
     np.random.seed(seed)
     data = []
     for key, value_list in datas.items():
-        ls = [(one_hot_labels[lbl2idx[key]], value) for value in value_list]
+        if one_hot:
+            lbl = one_hot_labels[lbl2idx[key]]
+        else:
+            lbl = key
+
+        ls = [(lbl, value) for value in value_list]
         data.extend(ls)
 
     np.random.shuffle(data)
@@ -415,37 +421,6 @@ class OmniglotTest(Dataset):
         return img1, img2
 
 
-# def loadHotels(dataset_path, dataset_name, mode='train'):
-#     if dataset_name == 'hotels':
-#         dataset_path = os.path.join(dataset_path, 'hotels')
-#
-#     with open(os.path.join(dataset_path, 'hotel50-image_label.csv')) as f:
-#         hotels = pd.read_csv(f)
-#     with open(os.path.join(dataset_path, 'background_or_novel.csv')) as f:
-#         b_or_n = pd.read_csv(f)
-#
-#     train = (mode == 'train')
-#
-#     if train:
-#         label_list = list(b_or_n[b_or_n['background'] == 1]['label'])  # for background classes
-#     else:
-#         label_list = list(b_or_n[b_or_n['background'] == 0]['label'])  # for novel classses
-#
-#     datas = {}
-#     length = 0
-#     for idx, row in hotels.iterrows():
-#         if row['hotel_label'] in label_list:
-#             lbl = row['hotel_label']
-#             if lbl not in datas.keys():
-#                 datas[lbl] = []
-#             datas[lbl].append(os.path.join(dataset_path, row['image']))
-#
-#     for _, value in datas.items():
-#         length += len(value)
-#
-#     return datas, len(label_list), length, label_list
-#
-
 class HotelTrain(Dataset):
     def __init__(self, args, transform=None, mode='train'):
         super(HotelTrain, self).__init__()
@@ -455,7 +430,7 @@ class HotelTrain(Dataset):
         self.datas, self.num_classes, self.length, self.labels, _ = loadDataToMem(args.dataset_path, args.dataset_name,
                                                                                   args.dataset_split_type,
                                                                                   mode=mode,
-                                                                                  split_file_name='splits_50k',
+                                                                                  split_file_name=args.splits_file_name,
                                                                                   portion=args.portion)
 
         self.shuffled_data = get_shuffled_data(datas=self.datas, seed=args.seed)
@@ -539,7 +514,7 @@ class HotelTest(Dataset):
         self.datas, self.num_classes, _, self.labels, self.datas_bg = loadDataToMem(args.dataset_path,
                                                                                     args.dataset_name,
                                                                                     args.dataset_split_type, mode=mode,
-                                                                                    split_file_name='splits_50k',
+                                                                                    split_file_name=args.splits_file_name,
                                                                                     portion=args.portion)
 
         print(f'hotel {mode} classes: ', self.num_classes)
@@ -567,3 +542,42 @@ class HotelTest(Dataset):
             img1 = self.transform(self.img1)
             img2 = self.transform(img2)
         return img1, img2
+
+
+class Hotel_DB(Dataset):
+    def __init__(self, args, transform=None, mode='test'):
+        np.random.seed(args.seed)
+        super(Hotel_DB, self).__init__()
+        self.transform = transform
+
+        mode_tmp = mode + '_seen'
+        self.datas, self.num_classes, _, self.labels, self.datas_bg = loadDataToMem(args.dataset_path,
+                                                                        args.dataset_name,
+                                                                        args.dataset_split_type, mode=mode_tmp,
+                                                                        split_file_name=args.splits_file_name,
+                                                                        portion=args.portion)
+
+        self.all_shuffled_data = get_shuffled_data(self.datas_bg, seed=args.seed, one_hot=False)
+
+
+        print(f'hotel {mode} classes: ', self.num_classes)
+        print(f'hotel {mode} length: ', self.__len__())
+
+    def __len__(self):
+        return len(self.all_shuffled_data)
+
+    def __getitem__(self, index):
+        lbl = self.all_shuffled_data[index][0]
+        img = Image.open(self.all_shuffled_data[index][1]).convert('RGB')
+
+        path = self.all_shuffled_data[index][1].split('/')
+
+        id = path[-4]
+        id += '-' + path[-3]
+        id += '-' + path[-1].split('.')[0]
+
+
+        if self.transform:
+            img = self.transform(img)
+
+        return img, lbl, id

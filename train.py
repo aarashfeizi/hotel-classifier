@@ -8,6 +8,8 @@ import model_helper_functions
 import utils
 from dataloader import *
 from models.top_model import *
+import time
+import multiprocessing
 
 
 def _logger():
@@ -52,6 +54,8 @@ def main():
     train_set = None
     test_set = None
     val_set = None
+    val_set_known = None
+    val_set_unknown = None
 
     # train_classification_dataset = CUBClassification(args, transform=data_transforms, mode='train')
 
@@ -76,12 +80,21 @@ def main():
     elif args.dataset_name == 'hotels':
 
         train_set = HotelTrain(args, transform=data_transforms, mode='train')
+        print('*' * 10)
         val_set_known = HotelTest(args, transform=data_transforms, mode='val_seen')
+        print('*' * 10)
         val_set_unknown = HotelTest(args, transform=data_transforms, mode='val_unseen')
+        print('*' * 10)
+
 
         if args.test:
             test_set_known = HotelTest(args, transform=data_transforms, mode='test_seen')
+            print('*' * 10)
             test_set_unknown = HotelTest(args, transform=data_transforms, mode='test_unseen')
+            print('*' * 10)
+
+        if args.cbir:
+            db_set = Hotel_DB(args, transform=data_transforms, mode='val')
 
     else:
         print('Fuck: ', args.dataset_name)
@@ -91,7 +104,6 @@ def main():
     # train_classify_loader = DataLoader(train_classification_dataset, batch_size=args.batch_size, shuffle=False,
     #                                    num_workers=args.workers)
     test_loaders = []
-    val_loaders = []
 
     if args.test:
         if args.dataset_split_type == 'original':
@@ -102,77 +114,18 @@ def main():
                 DataLoader(test_set_known, batch_size=args.way, shuffle=False, num_workers=args.workers))
             test_loaders.append(
                 DataLoader(test_set_unknown, batch_size=args.way, shuffle=False, num_workers=args.workers))
-    ###
-    import time
-    import multiprocessing
-    use_cuda = torch.cuda.is_available()
-    core_number = multiprocessing.cpu_count()
-    batch_size = 64
-    best_num_worker = [0, 0]
-    best_time = [99999999, 99999999]
-    print('cpu_count =', core_number)
 
-    def loading_time(num_workers, pin_memory):
-        kwargs = {'num_workers': num_workers, 'pin_memory': pin_memory} if use_cuda else {}
-        train_loader = torch.utils.data.DataLoader(
-            train_set, batch_size=args.batch_size, shuffle=False, **kwargs)
-        start = time.time()
-        for epoch in range(4):
-            for batch_idx, (_, _, _) in enumerate(train_loader):
-                if batch_idx == 15:
-                    break
-                pass
-        end = time.time()
-        print("  Used {} second with num_workers = {}".format(end - start, num_workers))
-        return end - start
+    workers = 4
+    pin_memory = False
+    # workers, pin_memory = utils.get_best_workers_pinmememory(args, train_set)
 
-    for pin_memory in [False, True]:
-        print("While pin_memory =", pin_memory)
-        for num_workers in range(0, core_number * 2 + 1, 4):
-            current_time = loading_time(num_workers, pin_memory)
-            if current_time < best_time[pin_memory]:
-                best_time[pin_memory] = current_time
-                best_num_worker[pin_memory] = num_workers
-            else:  # assuming its a convex function
-                if best_num_worker[pin_memory] == 0:
-                    the_range = []
-                else:
-                    the_range = list(range(best_num_worker[pin_memory] - 3, best_num_worker[pin_memory]))
-                for num_workers in (
-                        the_range + list(range(best_num_worker[pin_memory] + 1, best_num_worker[pin_memory] + 4))):
-                    current_time = loading_time(num_workers, pin_memory)
-                    if current_time < best_time[pin_memory]:
-                        best_time[pin_memory] = current_time
-                        best_num_worker[pin_memory] = num_workers
-                break
-    if best_time[0] < best_time[1]:
-        print("Best num_workers =", best_num_worker[0], "with pin_memory = False")
-        workers = best_num_worker[0]
-        pin_memory = False
-    else:
-        print("Best num_workers =", best_num_worker[1], "with pin_memory = True")
-        workers = best_num_worker[1]
-        pin_memory = True
-    ###
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=False, num_workers=workers,
                               pin_memory=pin_memory)
 
-    if (val_set is not None) or (val_set_known is not None):
+    val_loaders = utils.get_val_loaders(args, val_set, val_set_known, val_set_unknown, workers, pin_memory)
 
-        if args.dataset_split_type == 'original':
-            val_loaders.append(DataLoader(val_set, batch_size=args.way, shuffle=False, num_workers=workers,
-                              pin_memory=pin_memory))
-
-        elif args.dataset_split_type == 'new':
-            val_loaders.append(
-                DataLoader(val_set_known, batch_size=args.way, shuffle=False, num_workers=workers,
-                              pin_memory=pin_memory))
-            val_loaders.append(
-                DataLoader(val_set_unknown, batch_size=args.way, shuffle=False, num_workers=workers,
-                              pin_memory=pin_memory))
-    else:
-        val_loaders = None
-        raise Exception('No validation data is set!')
+    if args.cbir:
+        db_loader = DataLoader(db_set, batch_size=args.db_batch, shuffle=False, num_workers=workers, pin_memory=pin_memory)
 
     loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean')
 
@@ -222,6 +175,8 @@ def main():
     if args.model_name == '':  # train
         logger.info('Training')
         tm_net, best_model_top = model_methods_top.train_fewshot(tm_net, loss_fn, args, train_loader, val_loaders)
+        logger.info('Calculating K@Ns for Validation')
+        model_methods_top.make_emb_db(args, tm_net, db_loader, val=True, batch_size=args.db_batch)
     else:  # test
         logger.info('Testing')
         best_model_top = args.model_name
