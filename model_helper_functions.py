@@ -433,12 +433,12 @@ class ModelMethods:
             import pdb
             # pdb.set_trace()
 
-        utils.save_h5('test_ids', test_paths, 'S20', 'testIds.h5')
-        utils.save_h5('test_classes', test_classes, 'i8', 'testClasses.h5')
-        utils.save_h5('test_feats', test_feats, 'f', 'testFeats.h5')
+        utils.save_h5('test_ids', test_paths, 'S20', os.path.join(self.save_path, 'testIds.h5'))
+        utils.save_h5('test_classes', test_classes, 'i8', os.path.join(self.save_path, 'testClasses.h5'))
+        utils.save_h5('test_feats', test_feats, 'f', os.path.join(self.save_path, 'testFeats.h5'))
 
-        test_feats = utils.load_h5('test_feats', 'testFeats.h5')
-        test_classes = utils.load_h5('test_classes', 'testClasses.h5')
+        test_feats = utils.load_h5('test_feats', os.path.join(self.save_path, 'testFeats.h5'))
+        test_classes = utils.load_h5('test_classes', os.path.join(self.save_path, 'testClasses.h5'))
 
         utils.get_distance(test_feats, test_classes, logger=self.logger)
 

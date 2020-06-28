@@ -16,6 +16,7 @@ except ImportError:
 
 
 class TransformLoader:
+
     def __init__(self, image_size, rotate=0,
                  normalize_param=dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
                  jitter_param=dict(Brightness=0.4, Contrast=0.4, Color=0.4)):
@@ -127,18 +128,17 @@ class Percision_At_K():
                f'k@5 = {k5}\n' \
                f'k@10 = {k10}\n' \
                f'k@100 = {k100}\n'
-               # f'recall@1 = {r1}\n' \
-               # f'recall@5 = {r5}\n' \
-               # f'recall@10 = {r10}\n' \
-               # f'recall@100 = {r100}\n'
+        # f'recall@1 = {r1}\n' \
+        # f'recall@5 = {r5}\n' \
+        # f'recall@10 = {r10}\n' \
+        # f'recall@100 = {r100}\n'
 
     def get_metrics(self):
-        return (self.k1 / self.n),\
-               (self.k5 / self.n),\
-               (self.k10 / self.n),\
+        return (self.k1 / self.n), \
+               (self.k5 / self.n), \
+               (self.k10 / self.n), \
                (self.k100 / self.n)
-               # self.r1, self.r5, self.r10, self.r100
-
+        # self.r1, self.r5, self.r10, self.r100
 
 
 # '../../dataset/omniglot/python/images_background'
@@ -307,7 +307,4 @@ def get_distance(img_feats, img_lbls, logger):
 
         metric.update(lbl, ret_lbls)
 
-
-
     logger.info(metric)
-
