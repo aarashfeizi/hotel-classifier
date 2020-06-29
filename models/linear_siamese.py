@@ -11,7 +11,7 @@ class LiSiamese(nn.Module):
         # self.layer = nn.Sequential(nn.Linear(25088, 512))
         if self.extra_layer:
             if args.normalize:
-                self.layer1 = nn.Sequential(nn.Linear(512, 512), nn.ReLU(), nn.BatchNorm2d)
+                self.layer1 = nn.Sequential(nn.Linear(512, 512), nn.ReLU(), nn.BatchNorm2d())
             else:
                 self.layer1 = nn.Sequential(nn.Linear(512, 512), nn.ReLU())
             # self.layer2 = nn.Sequential(nn.Linear(512, 512), nn.ReLU())
