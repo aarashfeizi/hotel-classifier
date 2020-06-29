@@ -24,7 +24,7 @@ class ModelMethods:
         self.model_name = self._parse_args(args)
         self.save_path = os.path.join(args.save_path, self.model_name + id_str)
         self.new_split_type = args.dataset_split_type == 'new'
-        self.tensorboard_path = os.path.join(args.log_path, 'tensorboard-' + self.model_name + id_str)
+        self.tensorboard_path = os.path.join(args.tb_path, self.model_name + id_str)
         self.logger = logger
         self.writer = SummaryWriter(self.tensorboard_path)
 

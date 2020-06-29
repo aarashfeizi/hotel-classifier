@@ -10,7 +10,11 @@ class LiSiamese(nn.Module):
         self.extra_layer = args.extra_layer
         # self.layer = nn.Sequential(nn.Linear(25088, 512))
         if self.extra_layer:
-            self.layer1 = nn.Sequential(nn.Linear(512, 512), nn.ReLU())
+            if args.normalize:
+                self.layer1 = nn.Sequential(nn.Linear(512, 512), nn.ReLU(), nn.BatchNorm2d)
+            else:
+                self.layer1 = nn.Sequential(nn.Linear(512, 512), nn.ReLU())
+            # self.layer2 = nn.Sequential(nn.Linear(512, 512), nn.ReLU())
         self.out = nn.Sequential(nn.Linear(512, 1))  # no sigmoid!!!!
 
     def forward_one(self, x):
