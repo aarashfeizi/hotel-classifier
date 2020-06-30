@@ -43,14 +43,14 @@ class ModelMethods:
                           'aug',
                           'rotate',
                           'batch_size',
-                          'lr',
+                          'lr_siamese',
+                          'lr_resnet',
                           'ep',
                           'sigmoid',
                           'freeze_ext',
                           'feat_extractor',
                           'extra_layer',
                           'dataset_split_type',
-                          'lr_diff',
                           'normalize']
 
         for arg in vars(args):
