@@ -9,17 +9,22 @@ class LiSiamese(nn.Module):
 
         self.extra_layer = args.extra_layer
         # self.layer = nn.Sequential(nn.Linear(25088, 512))
-        if self.extra_layer:
-            if args.normalize:
-                self.layer1 = nn.Sequential(nn.Linear(512, 512), nn.ReLU(), nn.BatchNorm1d(512))
-            else:
-                self.layer1 = nn.Sequential(nn.Linear(512, 512), nn.ReLU())
+        if self.extra_layer > 0:
+            layers = []
+            for i in range(self.extra_layer):
+                layers.append(nn.Linear(512, 512))
+                layers.append(nn.ReLU())
+                if args.normalize:
+                    layers.append(nn.BatchNorm1d(512))
+
+            self.layer1 = nn.Sequential(*layers)
+
             # self.layer2 = nn.Sequential(nn.Linear(512, 512), nn.ReLU())
         self.out = nn.Sequential(nn.Linear(512, 1))  # no sigmoid!!!!
 
     def forward_one(self, x):
         x = x.view(x.size()[0], -1)
-        if self.extra_layer:
+        if self.extra_layer > 0:
             x = self.layer1(x)
         return x
 

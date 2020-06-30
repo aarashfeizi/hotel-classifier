@@ -168,7 +168,7 @@ def get_args():
     parser.add_argument('-fe', '--feat_extractor', default='resnet18',
                         choices=['resnet18', 'resnet34', 'resnet50', 'resnet101'])
     parser.add_argument('-fr', '--freeze_ext', default=False, action='store_true')
-    parser.add_argument('-el', '--extra_layer', default=False, action='store_true')
+    parser.add_argument('-el', '--extra_layer', default=0, type=int, help="Number of 512 extra layers in the Li-Siamese")
 
     parser.add_argument('-s', '--seed', default=402, type=int, help="random seed")
     parser.add_argument('-w', '--way', default=20, type=int, help="how much way one-shot learning")

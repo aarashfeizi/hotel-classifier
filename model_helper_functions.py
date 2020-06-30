@@ -50,7 +50,8 @@ class ModelMethods:
                           'feat_extractor',
                           'extra_layer',
                           'dataset_split_type',
-                          'lr_diff']
+                          'lr_diff',
+                          'normalize']
 
         for arg in vars(args):
             if str(arg) in important_args:
