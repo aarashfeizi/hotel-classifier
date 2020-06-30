@@ -92,7 +92,7 @@ class ModelMethods:
     def train_classify(self, net, loss_fn, args, trainLoader, valLoader):
         net.train()
 
-        opt = torch.optim.Adam(net.parameters(), lr=args.lr)
+        opt = torch.optim.Adam(net.parameters(), lr=args.lr_siamese)
         opt.zero_grad()
 
         train_losses = []
@@ -146,7 +146,7 @@ class ModelMethods:
         net.train()
         val_tol = args.early_stopping
         opt = torch.optim.Adam([{'params': net.sm_net.parameters()},
-                                {'params': net.ft_net.parameters(), 'lr': (args.lr / args.lr_diff)}], lr=args.lr)
+                                {'params': net.ft_net.parameters(), 'lr': args.lr_resnet}], lr=args.lr_siamese)
 
         opt.zero_grad()
 

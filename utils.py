@@ -168,7 +168,8 @@ def get_args():
     parser.add_argument('-fe', '--feat_extractor', default='resnet18',
                         choices=['resnet18', 'resnet34', 'resnet50', 'resnet101'])
     parser.add_argument('-fr', '--freeze_ext', default=False, action='store_true')
-    parser.add_argument('-el', '--extra_layer', default=0, type=int, help="Number of 512 extra layers in the Li-Siamese")
+    parser.add_argument('-el', '--extra_layer', default=0, type=int,
+                        help="Number of 512 extra layers in the Li-Siamese")
 
     parser.add_argument('-s', '--seed', default=402, type=int, help="random seed")
     parser.add_argument('-w', '--way', default=20, type=int, help="how much way one-shot learning")
@@ -177,9 +178,8 @@ def get_args():
     parser.add_argument('-fbw', '--find_best_workers', default=False, action='store_true')
     parser.add_argument('-bs', '--batch_size', default=128, type=int, help="number of batch size")
     parser.add_argument('-dbb', '--db_batch', default=128, type=int, help="number of batch size for db")
-    parser.add_argument('-lr', '--lr', default=0.00006, type=float, help="learning rate")
-    parser.add_argument('-lrd', '--lr_diff', default=10, type=int,
-                        help="learning rate difference in order (between feature_extractor and siamese net)")
+    parser.add_argument('-lrs', '--lr_siamese', default=1e-3, type=float, help="siamese learning rate")
+    parser.add_argument('-lrr', '--lr_resnet', default=1e-6, type=float, help="resnet learning rate")
     parser.add_argument('-lf', '--log_freq', default=10, type=int, help="show result after each show_every iter.")
     parser.add_argument('-sf', '--save_freq', default=100, type=int, help="save model after each save_every iter.")
     parser.add_argument('-tf', '--test_freq', default=100, type=int, help="test model after each test_every iter.")
@@ -189,7 +189,6 @@ def get_args():
     parser.add_argument('-tst', '--test', default=False, action='store_true')
     parser.add_argument('-cbir', '--cbir', default=False, action='store_true')
     parser.add_argument('-ptb', '--project_tb', default=False, action='store_true')
-
 
     parser.add_argument('-1cf', '--first_conv_filter', default=10, type=int, help="")
     parser.add_argument('-2cf', '--second_conv_filter', default=7, type=int, help="")
