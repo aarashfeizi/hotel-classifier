@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from torch.nn import Parameter
 from torchvision.models import ResNet as tResNet
+from torch.hub import load_state_dict_from_url
+import os
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
@@ -145,7 +147,7 @@ class ResNet(tResNet):
         x = self.avgpool(x)
         feat = x
         x = torch.flatten(x, 1)
-        x = self.new_fc(x)
+        # x = self.new_fc(x)
         # print('is_feat', is_feat)
         # print('type is_feat', type(is_feat))
         if is_feat:
@@ -162,14 +164,24 @@ class ResNet(tResNet):
             if isinstance(param, Parameter):
                 # backwards compatibility for serialized parameters
                 param = param.data
+            print(name)
+            # print('pretrained:', param.size())
+            # print('own:', own_state[name].size())
             own_state[name].copy_(param)
 
 
 def _resnet(arch, block, layers, pretrained, progress, num_classes, **kwargs):
     model = ResNet(block, layers, num_classes, **kwargs)
     if pretrained:
-        print(f'loading {arch} from pretrained')
-        state_dict = torch.load(f'models/pretrained_{arch}.pt')['model_state_dict']
+        if os.path.exists(f'models/pretrained_{arch}.pt'):
+            print(f'loading {arch} from pretrained')
+            state_dict = torch.load(f'models/pretrained_{arch}.pt')['model_state_dict']
+        else:
+            print(f'Downloading {arch}...')
+            # state_dict = load_state_dict_from_url(model_urls[arch],
+            #                                             progress=progress)
+            state_dict = torch.load('/Users/aarash/Downloads/resnet50-19c8e357.pth', map_location=None)
+
         model.load_my_state_dict(state_dict)
         print('pretrained loaded!')
     return model
@@ -197,7 +209,7 @@ def resnet34(pretrained=False, progress=True, num_classes=1, **kwargs):
                    **kwargs)
 
 
-def resnet50(pretrained=False, progress=True, num_classes=3, **kwargs):
+def resnet50(pretrained=False, progress=True, num_classes=1, **kwargs):
     r"""ResNet-50 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
     Args:
@@ -305,8 +317,10 @@ if __name__ == '__main__':
     }
 
     model = model_dict[args.model](pretrained=True)
+    print(model)
     torch.save({'model_state_dict': model.state_dict()},
                f'models/pretrained_{args.model}.pt')
+
     # data = torch.randn(2, 3, 64, 64)
     # data = torch.randn(64, 50, 3, 10)
     # data = torch.randn(10, 3, 64, 64)

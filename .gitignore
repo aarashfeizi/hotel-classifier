@@ -16,3 +16,5 @@ dummy_splits_50k
 dummy_*
 *.h5
 tb_neweval/
+local_cc_job.sh
+tensorboard/

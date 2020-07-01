@@ -414,7 +414,12 @@ class ModelMethods:
 
         test_classes = np.zeros(((len(data_loader.dataset))))
         test_paths = np.empty(dtype='S20', shape=((len(data_loader.dataset))))
-        test_feats = np.zeros((len(data_loader.dataset), 512))
+        if args.feat_extractor == 'resnet50':
+            test_feats = np.zeros((len(data_loader.dataset), 2048))
+        elif args.feat_extractor == 'resnet18':
+            test_feats = np.zeros((len(data_loader.dataset), 512))
+        else:
+            raise Exception('Not handled feature extractor')
 
         for idx, (img, lbl, path) in enumerate(data_loader):
 
