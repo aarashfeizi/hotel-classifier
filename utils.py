@@ -306,8 +306,8 @@ def get_distance(img_feats, img_lbls, logger):
 
         ret_scores = sorted(ret_scores, reverse=True)
         ret_lbls = [x for _, x in sorted(zip(ret_scores, ret_lbls))]
-        import pdb
-        pdb.set_trace()
+        # import pdb
+        # pdb.set_trace()
         metric.update(lbl, ret_lbls)
 
     logger.info(metric)
