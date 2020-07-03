@@ -397,13 +397,15 @@ class ModelMethods:
 
         return tests_right, tests_error, test_acc
 
-    def make_emb_db(self, args, net, data_loader, val=False, batch_size=None):
+    def make_emb_db(self, args, net, data_loader, val=False, batch_size=None,
+                    mode='all'):
         """
 
         :param args: utils args
         :param net: trained top_model network
         :param data_loader: DataLoader object
         :param val: validation or not
+        :param mode: mode 'seen' or 'unseen' (or 'all' if total both)
         :return: None
         """
         net.eval()
@@ -438,15 +440,15 @@ class ModelMethods:
 
             import pdb
             # pdb.set_trace()
-
-        utils.save_h5('test_ids', test_paths, 'S20', os.path.join(self.save_path, 'testIds.h5'))
-        utils.save_h5('test_classes', test_classes, 'i8', os.path.join(self.save_path, 'testClasses.h5'))
-        utils.save_h5('test_feats', test_feats, 'f', os.path.join(self.save_path, 'testFeats.h5'))
+        prefix = mode + '_'
+        utils.save_h5('test_ids', test_paths, 'S20', os.path.join(self.save_path, mode + 'testIds.h5'))
+        utils.save_h5('test_classes', test_classes, 'i8', os.path.join(self.save_path, mode + 'testClasses.h5'))
+        utils.save_h5('test_feats', test_feats, 'f', os.path.join(self.save_path, mode + 'testFeats.h5'))
 
         test_feats = utils.load_h5('test_feats', os.path.join(self.save_path, 'testFeats.h5'))
         test_classes = utils.load_h5('test_classes', os.path.join(self.save_path, 'testClasses.h5'))
 
-        utils.get_distance(test_feats, test_classes, logger=self.logger)
+        utils.get_distance(test_feats, test_classes, logger=self.logger, mode=mode)
 
     def load_model(self, args, net, best_model):
         checkpoint = torch.load(os.path.join(self.save_path, best_model))

@@ -103,7 +103,6 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
         if mode != 'train':
             datas_bg[idx].append(os.path.join(dataset_path, path))
 
-
     if mode != 'train':
         for idx, path in zip(image_labels_bg, image_path_bg):
             if idx not in datas_bg.keys():
@@ -550,15 +549,26 @@ class Hotel_DB(Dataset):
         super(Hotel_DB, self).__init__()
         self.transform = transform
 
-        mode_tmp = mode + '_seen'
+        total = True
+
+        if 'seen' in mode:  # mode == *_seen or *_unseen
+            mode_tmp = mode
+            total = False
+        else:
+            mode_tmp = mode + '_seen'
+            total = True
+
         self.datas, self.num_classes, _, self.labels, self.datas_bg = loadDataToMem(args.dataset_path,
-                                                                        args.dataset_name,
-                                                                        args.dataset_split_type, mode=mode_tmp,
-                                                                        split_file_name=args.splits_file_name,
-                                                                        portion=args.portion)
+                                                                                    args.dataset_name,
+                                                                                    args.dataset_split_type,
+                                                                                    mode=mode_tmp,
+                                                                                    split_file_name=args.splits_file_name,
+                                                                                    portion=args.portion)
 
-        self.all_shuffled_data = get_shuffled_data(self.datas_bg, seed=args.seed, one_hot=False)
-
+        if total:
+            self.all_shuffled_data = get_shuffled_data(self.datas_bg, seed=args.seed, one_hot=False)
+        else:
+            self.all_shuffled_data = get_shuffled_data(self.datas, seed=args.seed, one_hot=False)
 
         print(f'hotel {mode} classes: ', self.num_classes)
         print(f'hotel {mode} length: ', self.__len__())
@@ -575,7 +585,6 @@ class Hotel_DB(Dataset):
         id = path[-4]
         id += '-' + path[-3]
         id += '-' + path[-1].split('.')[0]
-
 
         if self.transform:
             img = self.transform(img)

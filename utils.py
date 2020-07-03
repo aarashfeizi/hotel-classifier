@@ -296,7 +296,7 @@ def load_h5(data_description, path):
     return data
 
 
-def get_distance(img_feats, img_lbls, logger):
+def get_distance(img_feats, img_lbls, logger, mode):
     sim_mat = cosine_similarity(img_feats)
 
     metric = Percision_At_K()
@@ -311,4 +311,6 @@ def get_distance(img_feats, img_lbls, logger):
         # pdb.set_trace()
         metric.update(lbl, ret_lbls)
 
+    logger.info(mode)
     logger.info(metric)
+    logger.info("*" * 50)

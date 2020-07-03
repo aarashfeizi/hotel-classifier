@@ -86,7 +86,6 @@ def main():
         val_set_unknown = HotelTest(args, transform=data_transforms, mode='val_unseen')
         print('*' * 10)
 
-
         if args.test:
             test_set_known = HotelTest(args, transform=data_transforms, mode='test_seen')
             print('*' * 10)
@@ -95,6 +94,8 @@ def main():
 
         if args.cbir:
             db_set = Hotel_DB(args, transform=data_transforms, mode='val')
+            db_set_seen = Hotel_DB(args, transform=data_transforms, mode='val_seen')
+            db_set_unseen = Hotel_DB(args, transform=data_transforms, mode='val_unseen')
 
     else:
         print('Fuck: ', args.dataset_name)
@@ -129,7 +130,12 @@ def main():
     val_loaders = utils.get_val_loaders(args, val_set, val_set_known, val_set_unknown, workers, pin_memory)
 
     if args.cbir:
-        db_loader = DataLoader(db_set, batch_size=args.db_batch, shuffle=False, num_workers=workers, pin_memory=pin_memory)
+        db_loader = DataLoader(db_set, batch_size=args.db_batch, shuffle=False, num_workers=workers,
+                               pin_memory=pin_memory)
+        db_loader_seen = DataLoader(db_set_seen, batch_size=args.db_batch, shuffle=False, num_workers=workers,
+                                    pin_memory=pin_memory)
+        db_loader_unseen = DataLoader(db_set_unseen, batch_size=args.db_batch, shuffle=False, num_workers=workers,
+                                      pin_memory=pin_memory)
 
     loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean')
 
@@ -180,7 +186,9 @@ def main():
         logger.info('Training')
         tm_net, best_model_top = model_methods_top.train_fewshot(tm_net, loss_fn, args, train_loader, val_loaders)
         logger.info('Calculating K@Ns for Validation')
-        model_methods_top.make_emb_db(args, tm_net, db_loader, val=True, batch_size=args.db_batch)
+        model_methods_top.make_emb_db(args, tm_net, db_loader, val=True, batch_size=args.db_batch, mode='all')
+        model_methods_top.make_emb_db(args, tm_net, db_loader_seen, val=True, batch_size=args.db_batch, mode='seen')
+        model_methods_top.make_emb_db(args, tm_net, db_loader_unseen, val=True, batch_size=args.db_batch, mode='unseen')
     else:  # test
         logger.info('Testing')
         best_model_top = args.model_name
