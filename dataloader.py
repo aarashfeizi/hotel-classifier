@@ -101,13 +101,13 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
 
         datas[idx].append(os.path.join(dataset_path, path))
         if mode != 'train':
-            datas_bg[idx].append(os.path.join(dataset_path, path))
+            datas_bg[idx].append((os.path.join(dataset_path, path), True))
 
     if mode != 'train':
         for idx, path in zip(image_labels_bg, image_path_bg):
             if idx not in datas_bg.keys():
                 datas_bg[idx] = []
-            datas_bg[idx].append(os.path.join(dataset_path, path))
+            datas_bg[idx].append((os.path.join(dataset_path, path), False))
 
     labels = np.unique(image_labels)
     print(f'Number of labels in {mode}: ', len(labels))
@@ -120,7 +120,7 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
     return datas, num_classes, num_instances, labels, datas_bg
 
 
-def get_shuffled_data(datas, seed=0, one_hot=True):  # for sequential labels only
+def get_shuffled_data(datas, seed=0, one_hot=True, both_seen_unseen=False):  # for sequential labels only
 
     labels = sorted(datas.keys())
 
@@ -130,6 +130,7 @@ def get_shuffled_data(datas, seed=0, one_hot=True):  # for sequential labels onl
     # print(one_hot_labels)
 
     np.random.seed(seed)
+
     data = []
     for key, value_list in datas.items():
         if one_hot:
@@ -137,7 +138,11 @@ def get_shuffled_data(datas, seed=0, one_hot=True):  # for sequential labels onl
         else:
             lbl = key
 
-        ls = [(lbl, value) for value in value_list]
+        if both_seen_unseen:
+            ls = [(lbl, value, bl) for value, bl in value_list] # todo to be able to separate seen and unseen in k@n
+        else:
+            ls = [(lbl, value) for value in value_list]
+
         data.extend(ls)
 
     np.random.shuffle(data)
@@ -565,10 +570,10 @@ class Hotel_DB(Dataset):
                                                                                     split_file_name=args.splits_file_name,
                                                                                     portion=args.portion)
 
-        if total:
-            self.all_shuffled_data = get_shuffled_data(self.datas_bg, seed=args.seed, one_hot=False)
-        else:
-            self.all_shuffled_data = get_shuffled_data(self.datas, seed=args.seed, one_hot=False)
+        # if total:
+        self.all_shuffled_data = get_shuffled_data(self.datas_bg, seed=args.seed, one_hot=False, both_seen_unseen=True)
+        # else: # todo
+        #     self.all_shuffled_data = get_shuffled_data(self.datas, seed=args.seed, one_hot=False)
 
         print(f'hotel {mode} classes: ', self.num_classes)
         print(f'hotel {mode} length: ', self.__len__())
@@ -579,6 +584,7 @@ class Hotel_DB(Dataset):
     def __getitem__(self, index):
         lbl = self.all_shuffled_data[index][0]
         img = Image.open(self.all_shuffled_data[index][1]).convert('RGB')
+        bl = self.all_shuffled_data[index][2]
 
         path = self.all_shuffled_data[index][1].split('/')
 
@@ -589,4 +595,4 @@ class Hotel_DB(Dataset):
         if self.transform:
             img = self.transform(img)
 
-        return img, lbl, id
+        return img, lbl, bl, id #todo bl?

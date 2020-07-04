@@ -142,6 +142,8 @@ def main():
     # train resnet
 
     num_classes = train_set.num_classes
+    logger.info('Num classes in train:')
+    print(num_classes)
     #
     # print('num_classes', num_classes)
     #
@@ -186,9 +188,7 @@ def main():
         logger.info('Training')
         tm_net, best_model_top = model_methods_top.train_fewshot(tm_net, loss_fn, args, train_loader, val_loaders)
         logger.info('Calculating K@Ns for Validation')
-        model_methods_top.make_emb_db(args, tm_net, db_loader, val=True, batch_size=args.db_batch, mode='all')
-        model_methods_top.make_emb_db(args, tm_net, db_loader_seen, val=True, batch_size=args.db_batch, mode='seen')
-        model_methods_top.make_emb_db(args, tm_net, db_loader_unseen, val=True, batch_size=args.db_batch, mode='unseen')
+        model_methods_top.make_emb_db(args, tm_net, db_loader, val=True, batch_size=args.db_batch)
     else:  # test
         logger.info('Testing')
         best_model_top = args.model_name

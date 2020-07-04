@@ -164,8 +164,8 @@ class ResNet(tResNet):
             if isinstance(param, Parameter):
                 # backwards compatibility for serialized parameters
                 param = param.data
-            print(name)
-            # print('pretrained:', param.size())
+            print(name, param.size())
+            # print('pretrained:')
             # print('own:', own_state[name].size())
             own_state[name].copy_(param)
 

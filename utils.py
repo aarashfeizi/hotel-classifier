@@ -296,21 +296,38 @@ def load_h5(data_description, path):
     return data
 
 
-def get_distance(img_feats, img_lbls, logger, mode):
+def get_distance(img_feats, img_lbls, seen_list, logger):
     sim_mat = cosine_similarity(img_feats)
 
-    metric = Percision_At_K()
+    metric_total = Percision_At_K()
+    metric_seen = Percision_At_K()
+    metric_unseen = Percision_At_K()
 
-    for idx, (row, lbl) in enumerate(zip(sim_mat, img_lbls)):
+    for idx, (row, lbl, seen) in enumerate(zip(sim_mat, img_lbls, seen_list)):
         ret_scores = np.delete(row, idx)
         ret_lbls = np.delete(img_lbls, idx)
+        ret_seens = np.delete(seen_list, idx)
 
-        ret_scores = sorted(ret_scores, reverse=True)
-        ret_lbls = [x for _, x in sorted(zip(ret_scores, ret_lbls))]
-        # import pdb
-        # pdb.set_trace()
-        metric.update(lbl, ret_lbls)
+        ret_lbls = [x for _, x in sorted(zip(ret_scores, ret_lbls), reverse=True)]
+        ret_lbls = np.array(ret_lbls)
 
-    logger.info(mode)
-    logger.info(metric)
+        metric_total.update(lbl, ret_lbls)
+
+        if seen == 1:
+            metric_seen.update(lbl, ret_lbls[ret_seens == 1])
+        else:
+            metric_unseen.update(lbl, ret_lbls[ret_seens == 0])
+
+    logger.info('Total: ' + str(metric_total.n))
+    logger.info(metric_total)
     logger.info("*" * 50)
+
+    logger.info('Seen: ' + str(metric_seen.n))
+    logger.info(metric_seen)
+    logger.info("*" * 50)
+
+    logger.info('Unseen: ' + str(metric_unseen.n))
+    logger.info(metric_unseen)
+    logger.info("*" * 50)
+
+
