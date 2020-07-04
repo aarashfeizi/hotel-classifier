@@ -119,7 +119,7 @@ def main():
     # workers = 4
     # pin_memory = False
     if args.find_best_workers:
-        workers, pin_memory = utils.get_best_workers_pinmememory(args, train_set)
+        workers, pin_memory = utils.get_best_workers_pinmemory(args, train_set, pin_memories=[True], starting_from=5)
     else:
         workers = args.workers
         pin_memory = args.pin_memory

@@ -222,7 +222,7 @@ def loading_time(args, train_set, use_cuda, num_workers, pin_memory):
     return end - start
 
 
-def get_best_workers_pinmememory(args, train_set):
+def get_best_workers_pinmemory(args, train_set, pin_memories=[False, True], starting_from=0):
     use_cuda = torch.cuda.is_available()
     core_number = multiprocessing.cpu_count()
     batch_size = 64
@@ -230,9 +230,9 @@ def get_best_workers_pinmememory(args, train_set):
     best_time = [99999999, 99999999]
     print('cpu_count =', core_number)
 
-    for pin_memory in [False, True]:
+    for pin_memory in pin_memories:
         print("While pin_memory =", pin_memory)
-        for num_workers in range(0, core_number * 2 + 1, 4):
+        for num_workers in range(starting_from, core_number * 2 + 1, 4):
             current_time = loading_time(args, train_set, use_cuda, num_workers, pin_memory)
             if current_time < best_time[pin_memory]:
                 best_time[pin_memory] = current_time
