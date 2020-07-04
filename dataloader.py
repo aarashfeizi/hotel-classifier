@@ -540,7 +540,7 @@ class HotelTest(Dataset):
             c2 = list(self.datas_bg.keys())[random.randint(0, len(self.datas_bg.keys()) - 1)]
             while self.c1 == c2:
                 c2 = list(self.datas_bg.keys())[random.randint(0, len(self.datas_bg.keys()) - 1)]
-            img2 = Image.open(random.choice(self.datas_bg[c2])).convert('RGB')
+            img2 = Image.open(random.choice(self.datas_bg[c2])[0]).convert('RGB')
 
         if self.transform:
             img1 = self.transform(self.img1)
