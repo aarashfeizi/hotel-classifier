@@ -320,9 +320,6 @@ def get_distance(img_feats, img_lbls, seen_list, logger):
         else:
             metric_unseen.update(lbl, ret_lbls[ret_seens == 0])
 
-        import pdb
-        pdb.set_trace()
-
     logger.info('Total: ' + str(metric_total.n))
     logger.info(metric_total)
     logger.info("*" * 50)
