@@ -22,17 +22,24 @@ class ModelMethods:
 
         self.model = model
         self.model_name = self._parse_args(args)
-        self.save_path = os.path.join(args.save_path, self.model_name + id_str)
+
+        if args.pretrained_model_dir == '':
+            self.save_path = os.path.join(args.save_path, self.model_name + id_str)
+        else:
+            self.logger.info(f"Using pretrained path... \nargs.pretrained_model_dir: {args.pretrained_model_dir}")
+            self.save_path = os.path.join(args.save_path, args.pretrained_model_dir)
+
         self.new_split_type = args.dataset_split_type == 'new'
         self.tensorboard_path = os.path.join(args.tb_path, self.model_name + id_str)
         self.logger = logger
         self.writer = SummaryWriter(self.tensorboard_path)
 
+        self.logger.info("** Save path: " + self.save_path)
         self.logger.info("** Tensorboard path: " + self.tensorboard_path)
 
         if not os.path.exists(self.save_path):
             os.mkdir(self.save_path)
-            self.logger.info(f'Created save and log directories {self.save_path} and {self.tensorboard_path}')
+            self.logger.info(f'Created save and tensorboard directories:\n{self.save_path}\nand\n{self.tensorboard_path}')
         else:
             self.logger.info(f'Save directory {self.save_path} already exists, but how?? {id_str}')  # almost impossible
 

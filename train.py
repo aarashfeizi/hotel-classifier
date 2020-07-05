@@ -119,7 +119,7 @@ def main():
     # workers = 4
     # pin_memory = False
     if args.find_best_workers:
-        workers, pin_memory = utils.get_best_workers_pinmemory(args, train_set, pin_memories=[True], starting_from=5)
+        workers, pin_memory = utils.get_best_workers_pinmemory(args, train_set, pin_memories=[True], starting_from=0)
     else:
         workers = args.workers
         pin_memory = args.pin_memory
@@ -192,6 +192,12 @@ def main():
     else:  # test
         logger.info('Testing')
         best_model_top = args.model_name
+
+    if args.katn and args.model_name != '':
+        logger.info(f"Not training, loading {best_model_top} model...")
+        tm_net = model_methods_top.load_model(args, tm_net, best_model_top)
+        logger.info('Calculating K@Ns for Validation')
+        model_methods_top.make_emb_db(args, tm_net, db_loader, val=True, batch_size=args.db_batch)
 
     # testing
     if args.test:

@@ -164,6 +164,7 @@ def get_args():
     parser.add_argument('-a', '--aug', default=False, action='store_true')
     parser.add_argument('-r', '--rotate', default=0.0, type=float)
     parser.add_argument('-mn', '--model_name', default='')
+    parser.add_argument('-pmd', '--pretrained_model_dir', default='')
     parser.add_argument('-ev', '--eval_mode', default='fewshot', choices=['fewshot', 'simple'])
     parser.add_argument('-fe', '--feat_extractor', default='resnet18',
                         choices=['resnet18', 'resnet34', 'resnet50', 'resnet101'])
@@ -188,6 +189,7 @@ def get_args():
     parser.add_argument('-ep', '--epochs', default=1, type=int, help="number of epochs before stopping")
     parser.add_argument('-es', '--early_stopping', default=10, type=int, help="number of tol for validation acc")
     parser.add_argument('-tst', '--test', default=False, action='store_true')
+    parser.add_argument('-katn', '--katn', default=False, action='store_true')
     parser.add_argument('-cbir', '--cbir', default=False, action='store_true')
     parser.add_argument('-ptb', '--project_tb', default=False, action='store_true')
 
@@ -317,6 +319,9 @@ def get_distance(img_feats, img_lbls, seen_list, logger):
             metric_seen.update(lbl, ret_lbls[ret_seens == 1])
         else:
             metric_unseen.update(lbl, ret_lbls[ret_seens == 0])
+
+        import pdb
+        pdb.set_trace()
 
     logger.info('Total: ' + str(metric_total.n))
     logger.info(metric_total)
