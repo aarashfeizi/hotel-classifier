@@ -20,11 +20,13 @@ class ModelMethods:
         id_str = str(datetime.datetime.now()).replace(' ', '_').replace(':', '-')
         id_str = '-time_' + id_str.replace('.', '-')
 
-        self.logger = logger
-        self.writer = SummaryWriter(self.tensorboard_path)
-
         self.model = model
         self.model_name = self._parse_args(args)
+
+
+        self.tensorboard_path = os.path.join(args.tb_path, self.model_name + id_str)
+        self.logger = logger
+        self.writer = SummaryWriter(self.tensorboard_path)
 
         if args.pretrained_model_dir == '':
             self.save_path = os.path.join(args.save_path, self.model_name + id_str)
@@ -33,7 +35,6 @@ class ModelMethods:
             self.save_path = os.path.join(args.save_path, args.pretrained_model_dir)
 
         self.new_split_type = args.dataset_split_type == 'new'
-        self.tensorboard_path = os.path.join(args.tb_path, self.model_name + id_str)
 
 
         self.logger.info("** Save path: " + self.save_path)
