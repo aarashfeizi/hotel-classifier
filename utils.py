@@ -154,6 +154,7 @@ def get_args():
     parser.add_argument('-por', '--portion', default=0, type=int)
     parser.add_argument('-dst', '--dataset_split_type', default='new', choices=['original', 'new'])
     parser.add_argument('-sfn', '--splits_file_name', default='splits_50k')
+    parser.add_argument('-ls', '--limit_samples', default=0, type=int, help="Limit samples per class for val and test")
     parser.add_argument('-sdp', '--subdir_path', default='images/')
     parser.add_argument('-trp', '--train_path', default='./omniglot/python/images_background')
     parser.add_argument('-tsp', '--test_path', default='./omniglot/python/images_evaluation')
