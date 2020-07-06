@@ -98,7 +98,7 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
             datas[idx] = []
             if mode != 'train':
                 datas_bg[idx] = []
-        if limit > 0 and len(datas[idx]) < limit:
+        if limit == 0 or len(datas[idx]) < limit:
             datas[idx].append(os.path.join(dataset_path, path))
             if mode != 'train':
                 datas_bg[idx].append((os.path.join(dataset_path, path), True))
@@ -107,7 +107,7 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
         for idx, path in zip(image_labels_bg, image_path_bg):
             if idx not in datas_bg.keys():
                 datas_bg[idx] = []
-            if limit > 0 and len(datas_bg[idx]) < limit:
+            if limit == 0 or len(datas_bg[idx]) < limit:
                 datas_bg[idx].append((os.path.join(dataset_path, path), False))
 
     labels = np.unique(image_labels)
