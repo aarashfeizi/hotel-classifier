@@ -13,7 +13,7 @@ import multiprocessing
 
 
 def _logger():
-    logging.basicConfig(format='%(message)s', stream=sys.stdout, level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s - %(message)s', stream=sys.stdout, level=logging.INFO)
     return logging.getLogger()
 
 
@@ -185,10 +185,10 @@ def main():
 
     logger.info('Training Top')
     if args.model_name == '':  # train
-        logger.info('Training')
-        tm_net, best_model_top = model_methods_top.train_fewshot(tm_net, loss_fn, args, train_loader, val_loaders)
         logger.info('Calculating K@Ns for Validation')
         model_methods_top.make_emb_db(args, tm_net, db_loader, val=True, batch_size=args.db_batch)
+        logger.info('Training')
+        tm_net, best_model_top = model_methods_top.train_fewshot(tm_net, loss_fn, args, train_loader, val_loaders)
     else:  # test
         logger.info('Testing')
         best_model_top = args.model_name

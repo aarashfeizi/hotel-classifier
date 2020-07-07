@@ -120,7 +120,7 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
     return datas, num_classes, num_instances, labels, datas_bg
 
 
-def get_shuffled_data(datas, seed=0, one_hot=True, both_seen_unseen=False):  # for sequential labels only
+def get_shuffled_data(datas, seed=0, one_hot=True, both_seen_unseen=False, shuffle=True):  # for sequential labels only
 
     labels = sorted(datas.keys())
 
@@ -139,13 +139,14 @@ def get_shuffled_data(datas, seed=0, one_hot=True, both_seen_unseen=False):  # f
             lbl = key
 
         if both_seen_unseen:
-            ls = [(lbl, value, bl) for value, bl in value_list] # todo to be able to separate seen and unseen in k@n
+            ls = [(lbl, value, bl) for value, bl in value_list]  # todo to be able to separate seen and unseen in k@n
         else:
             ls = [(lbl, value) for value in value_list]
 
         data.extend(ls)
 
-    np.random.shuffle(data)
+    if shuffle:
+        np.random.shuffle(data)
 
     return data
 
@@ -571,7 +572,11 @@ class Hotel_DB(Dataset):
                                                                                     portion=args.portion)
 
         # if total:
-        self.all_shuffled_data = get_shuffled_data(self.datas_bg, seed=args.seed, one_hot=False, both_seen_unseen=True)
+        self.all_shuffled_data = get_shuffled_data(self.datas_bg,
+                                                   seed=args.seed,
+                                                   one_hot=False,
+                                                   both_seen_unseen=True,
+                                                   shuffle=False)
         # else: # todo
         #     self.all_shuffled_data = get_shuffled_data(self.datas, seed=args.seed, one_hot=False)
 
@@ -595,4 +600,4 @@ class Hotel_DB(Dataset):
         if self.transform:
             img = self.transform(img)
 
-        return img, lbl, bl, id #todo bl?
+        return img, lbl, bl, id  # todo bl?
