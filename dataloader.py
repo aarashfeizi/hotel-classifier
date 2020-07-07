@@ -50,7 +50,7 @@ def _read_new_split(dataset_path, mode,
 
 
 def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_name='final_newsplits0_1',
-                  portion=0, return_paths=False, limit=0):
+                  portion=0, return_paths=False):
     print(split_file_name, '!!!!!!!!')
     if dataset_name == 'cub':
         dataset_path = os.path.join(dataPath, 'CUB')
@@ -98,17 +98,16 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
             datas[idx] = []
             if mode != 'train':
                 datas_bg[idx] = []
-        if limit == 0 or len(datas[idx]) < limit:
-            datas[idx].append(os.path.join(dataset_path, path))
-            if mode != 'train':
-                datas_bg[idx].append((os.path.join(dataset_path, path), True))
+
+        datas[idx].append(os.path.join(dataset_path, path))
+        if mode != 'train':
+            datas_bg[idx].append((os.path.join(dataset_path, path), True))
 
     if mode != 'train':
         for idx, path in zip(image_labels_bg, image_path_bg):
             if idx not in datas_bg.keys():
                 datas_bg[idx] = []
-            if limit == 0 or len(datas_bg[idx]) < limit:
-                datas_bg[idx].append((os.path.join(dataset_path, path), False))
+            datas_bg[idx].append((os.path.join(dataset_path, path), False))
 
     labels = np.unique(image_labels)
     print(f'Number of labels in {mode}: ', len(labels))
@@ -569,8 +568,7 @@ class Hotel_DB(Dataset):
                                                                                     args.dataset_split_type,
                                                                                     mode=mode_tmp,
                                                                                     split_file_name=args.splits_file_name,
-                                                                                    portion=args.portion,
-                                                                                    limit=args.limit_samples)
+                                                                                    portion=args.portion)
 
         # if total:
         self.all_shuffled_data = get_shuffled_data(self.datas_bg, seed=args.seed, one_hot=False, both_seen_unseen=True)
