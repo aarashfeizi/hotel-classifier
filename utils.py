@@ -44,6 +44,16 @@ class TransformLoader:
         else:
             return method()
 
+    ###
+    # todo for next week
+
+    # fuckin overleaf
+    # Average per class for metrics (k@n)
+    # k@n for training
+    # random crop in train
+    # visualize images before and after transformation to see what information is lost
+    # do NOT transform scale fo validation
+
     def get_composed_transform(self, aug=False):
         if aug:
             transform_list = ['RandomSizedCrop', 'ImageJitter', 'RandomHorizontalFlip', 'ToTensor', 'Normalize']
@@ -319,99 +329,114 @@ def get_distance(args, img_feats, img_lbls, seen_list, logger, limit=0, run_numb
     k10s_u = []
     k100s_u = []
 
+    sampled_indices_all = pd.read_csv('sample_index_por' + str(args.portion) + '.csv')
+    sampled_label_all = pd.read_csv('sample_label_por' + str(args.portion) + '.csv')
+
     for run in range(run_number):
+        column_name = f'run{run}'
+        sampled_indices = np.array(sampled_indices_all[column_name]).astype(int)
+        sampled_labels = np.array(sampled_label_all[column_name]).astype(int)
+
         logger.info('### Run ' + str(run) + "...")
-        chosen_img_feats = []
-        chosen_img_lbls = []
-        chosen_seen_list = []
-        chosen_indices = []
-        for lbl in all_lbls:
-            sample_num = sum(img_lbls == lbl)
-            lbl_indices = np.where(img_lbls == lbl)[0]
+        chosen_img_feats = img_feats[sampled_indices]
+        chosen_img_lbls = img_lbls[sampled_indices]
+        chosen_seen_list = seen_list[sampled_indices]
 
-            if sample_num > limit:
-                random_idx = np.random.choice(sample_num, size=limit, replace=False)
+        assert np.array_equal(sampled_labels, chosen_img_lbls)
 
-                chosen_indices.extend(lbl_indices[random_idx])
+        sim_mat = cosine_similarity(chosen_img_feats)
+        metric_total = Percision_At_K()
+        metric_seen = Percision_At_K()
+        metric_unseen = Percision_At_K()
+
+        for idx, (row, lbl, seen) in enumerate(zip(sim_mat, chosen_img_lbls, chosen_seen_list)):
+            ret_scores = np.delete(row, idx)
+            ret_lbls = np.delete(chosen_img_lbls, idx)
+            ret_seens = np.delete(chosen_seen_list, idx)
+
+            ret_lbls = [x for _, x in sorted(zip(ret_scores, ret_lbls), reverse=True)]
+            ret_lbls = np.array(ret_lbls)
+
+            metric_total.update(lbl, ret_lbls)
+
+            if seen == 1:
+                metric_seen.update(lbl, ret_lbls[ret_seens == 1])
             else:
-                chosen_indices.extend(lbl_indices)
+                metric_unseen.update(lbl, ret_lbls[ret_seens == 0])
 
+        logger.info('Total: ' + str(metric_total.n))
+        logger.info(metric_total)
+        k1, k5, k10, k100 = metric_total.get_metrics()
+        k1s.append(k1)
+        k5s.append(k5)
+        k10s.append(k10)
+        k100s.append(k100)
+        logger.info("*" * 50)
 
-        chosen_img_lbls = np.array(img_lbls[chosen_indices])
-        chosen_indices = np.array(chosen_indices)
+        logger.info('Seen: ' + str(metric_seen.n))
+        logger.info(metric_seen)
+        k1, k5, k10, k100 = metric_seen.get_metrics()
+        k1s_s.append(k1)
+        k5s_s.append(k5)
+        k10s_s.append(k10)
+        k100s_s.append(k100)
+        logger.info("*" * 50)
 
-        data = {'label': chosen_img_lbls, 'index': chosen_indices}
-        df = pd.DataFrame(data=data)
-        df.to_csv(str(run) + '_sample_index_por' + str(args.portion) + '.csv', header=True, index=False)
-        print('saved', run)
+        logger.info('Unseen: ' + str(metric_unseen.n))
+        logger.info(metric_unseen)
+        k1, k5, k10, k100 = metric_unseen.get_metrics()
+        k1s_u.append(k1)
+        k5s_u.append(k5)
+        k10s_u.append(k10)
+        k100s_u.append(k100)
+        logger.info("*" * 50)
 
-    import pdb
-    pdb.set_trace()
-        #
-        # sim_mat = cosine_similarity(chosen_img_feats)
-        # metric_total = Percision_At_K()
-        # metric_seen = Percision_At_K()
-        # metric_unseen = Percision_At_K()
-        #
-        # for idx, (row, lbl, seen) in enumerate(zip(sim_mat, chosen_img_lbls, chosen_seen_list)):
-        #     ret_scores = np.delete(row, idx)
-        #     ret_lbls = np.delete(chosen_img_lbls, idx)
-        #     ret_seens = np.delete(chosen_seen_list, idx)
-        #
-        #     ret_lbls = [x for _, x in sorted(zip(ret_scores, ret_lbls), reverse=True)]
-        #     ret_lbls = np.array(ret_lbls)
-        #
-        #     metric_total.update(lbl, ret_lbls)
-        #
-        #     if seen == 1:
-        #         metric_seen.update(lbl, ret_lbls[ret_seens == 1])
-        #     else:
-        #         metric_unseen.update(lbl, ret_lbls[ret_seens == 0])
-        #
-        # logger.info('Total: ' + str(metric_total.n))
-        # logger.info(metric_total)
-        # k1, k5, k10, k100 = metric_total.get_metrics()
-        # k1s.append(k1)
-        # k5s.append(k5)
-        # k10s.append(k10)
-        # k100s.append(k100)
-        # logger.info("*" * 50)
-        #
-        # logger.info('Seen: ' + str(metric_seen.n))
-        # logger.info(metric_seen)
-        # k1, k5, k10, k100 = metric_seen.get_metrics()
-        # k1s_s.append(k1)
-        # k5s_s.append(k5)
-        # k10s_s.append(k10)
-        # k100s_s.append(k100)
-        # logger.info("*" * 50)
-        #
-        # logger.info('Unseen: ' + str(metric_unseen.n))
-        # logger.info(metric_unseen)
-        # k1, k5, k10, k100 = metric_unseen.get_metrics()
-        # k1s_u.append(k1)
-        # k5s_u.append(k5)
-        # k10s_u.append(k10)
-        # k100s_u.append(k100)
-        # logger.info("*" * 50)
-        #
-        # logger.info('Avg Total: ' + str(metric_total.n))
-        # logger.info('k@1: ', np.array(k1s).mean())
-        # logger.info('k@5: ', np.array(k5s).mean())
-        # logger.info('k@10: ', np.array(k10s).mean())
-        # logger.info('k@100: ', np.array(k100s).mean())
-        # logger.info("*" * 50)
-        #
-        # logger.info('Avg Seen: ' + str(metric_seen.n))
-        # logger.info('k@1: ', np.array(k1s_s).mean())
-        # logger.info('k@5: ', np.array(k5s_s).mean())
-        # logger.info('k@10: ', np.array(k10s_s).mean())
-        # logger.info('k@100: ', np.array(k100s_s).mean())
-        # logger.info("*" * 50)
-        #
-        # logger.info('Avg Unseen: ' + str(metric_unseen.n))
-        # logger.info('k@1: ', np.array(k1s_u).mean())
-        # logger.info('k@5: ', np.array(k5s_u).mean())
-        # logger.info('k@10: ', np.array(k10s_u).mean())
-        # logger.info('k@100: ', np.array(k100s_u).mean())
-        # logger.info("*" * 50)
+    logger.info('Avg Total: ' + str(metric_total.n))
+    logger.info('k@1: ' + str(np.array(k1s).mean()))
+    logger.info('k@5: ' + str(np.array(k5s).mean()))
+    logger.info('k@10: ' + str(np.array(k10s).mean()))
+    logger.info('k@100: ' + str(np.array(k100s).mean()))
+    logger.info("*" * 50)
+
+    logger.info('Avg Seen: ' + str(metric_seen.n))
+    logger.info('k@1: ' + str(np.array(k1s_s).mean()))
+    logger.info('k@5: ' + str(np.array(k5s_s).mean()))
+    logger.info('k@10: ' + str(np.array(k10s_s).mean()))
+    logger.info('k@100: ' + str(np.array(k100s_s).mean()))
+    logger.info("*" * 50)
+
+    logger.info('Avg Unseen: ' + str(metric_unseen.n))
+    logger.info('k@1: ' + str(np.array(k1s_u).mean()))
+    logger.info('k@5: ' + str(np.array(k5s_u).mean()))
+    logger.info('k@10: ' + str(np.array(k10s_u).mean()))
+    logger.info('k@100: ' + str(np.array(k100s_u).mean()))
+    logger.info("*" * 50)
+
+    d = {'run': [i for i in range(run_number)],
+         'kAT1': k1s,
+         'kAT5': k5s,
+         'kAT10': k10s,
+         'kAT100': k100s,
+         'kAT1_seen': k1s_s,
+         'kAT5_seen': k5s_s,
+         'kAT10_seen': k10s_s,
+         'kAT100_seen': k100s_s,
+         'kAT1_unseen': k1s_u,
+         'kAT5_unseen': k5s_u,
+         'kAT10_unseen': k10s_u,
+         'kAT100_unseen': k100s_u}
+
+    average_tot = pd.DataFrame(data={'avg_kAT1': [np.array(k1s).mean()],
+                                     'avg_kAT5': [np.array(k5s).mean()],
+                                     'avg_kAT10': [np.array(k10s).mean()],
+                                     'avg_kAT100': [np.array(k100s).mean()],
+                                     'avg_kAT1_seen': [np.array(k1s_s).mean()],
+                                     'avg_kAT5_seen': [np.array(k5s_s).mean()],
+                                     'avg_kAT10_seen': [np.array(k10s_s).mean()],
+                                     'avg_kAT100_seen': [np.array(k100s_s).mean()],
+                                     'avg_kAT1_unseen': [np.array(k1s_u).mean()],
+                                     'avg_kAT5_unseen': [np.array(k5s_u).mean()],
+                                     'avg_kAT10_unseen': [np.array(k10s_u).mean()],
+                                     'avg_kAT100_unseen': [np.array(k100s_u).mean()]})
+
+    return average_tot, pd.DataFrame(data=d)

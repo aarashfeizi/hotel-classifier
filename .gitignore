@@ -18,3 +18,6 @@ dummy_*
 tb_neweval/
 local_cc_job.sh
 tensorboard/
+correct_files/
+index_making_tempfiles/
+*.jpg

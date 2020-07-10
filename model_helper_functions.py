@@ -457,7 +457,11 @@ class ModelMethods:
         test_classes = utils.load_h5('test_classes', os.path.join(self.save_path, 'testClasses.h5'))
         test_seen = utils.load_h5('test_seen', os.path.join(self.save_path, 'testSeen.h5'))
 
-        utils.get_distance(args, test_feats, test_classes, test_seen, logger=self.logger, limit=args.limit_samples, run_number=args.number_of_runs)
+        kavg, kruns = utils.get_distance(args, test_feats, test_classes, test_seen, logger=self.logger, limit=args.limit_samples, run_number=args.number_of_runs)
+        kavg.to_csv(os.path.join(self.save_path, 'avg_k@n.csv'), header=True, index=False)
+        kruns.to_csv(os.path.join(self.save_path, 'runs_k@n.csv'), header=True, index=False)
+        import pdb
+        pdb.set_trace()
 
     def load_model(self, args, net, best_model):
         checkpoint = torch.load(os.path.join(self.save_path, best_model))

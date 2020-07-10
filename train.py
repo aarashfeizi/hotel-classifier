@@ -176,19 +176,16 @@ def main():
     # multi gpu
     if len(args.gpu_ids.split(",")) > 1:
         tm_net = torch.nn.DataParallel(tm_net)
-    #
-    # import pdb
-    # pdb.set_trace()
 
     if args.cuda:
         tm_net.cuda()
 
     logger.info('Training Top')
-    if args.model_name == '':  # train
-        logger.info('Calculating K@Ns for Validation')
-        model_methods_top.make_emb_db(args, tm_net, db_loader, val=True, batch_size=args.db_batch)
+    if args.model_name == '':
         logger.info('Training')
         tm_net, best_model_top = model_methods_top.train_fewshot(tm_net, loss_fn, args, train_loader, val_loaders)
+        logger.info('Calculating K@Ns for Validation')
+        model_methods_top.make_emb_db(args, tm_net, db_loader, val=True, batch_size=args.db_batch)
     else:  # test
         logger.info('Testing')
         best_model_top = args.model_name
