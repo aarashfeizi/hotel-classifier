@@ -185,7 +185,7 @@ def main():
         logger.info('Training')
         tm_net, best_model_top = model_methods_top.train_fewshot(tm_net, loss_fn, args, train_loader, val_loaders)
         logger.info('Calculating K@Ns for Validation')
-        model_methods_top.make_emb_db(args, tm_net, db_loader, val=True, batch_size=args.db_batch)
+        model_methods_top.make_emb_db(args, tm_net, db_loader, newly_trained=True, batch_size=args.db_batch)
     else:  # test
         logger.info('Testing')
         best_model_top = args.model_name
@@ -194,7 +194,7 @@ def main():
         logger.info(f"Not training, loading {best_model_top} model...")
         tm_net = model_methods_top.load_model(args, tm_net, best_model_top)
         logger.info('Calculating K@Ns for Validation')
-        model_methods_top.make_emb_db(args, tm_net, db_loader, val=True, batch_size=args.db_batch)
+        model_methods_top.make_emb_db(args, tm_net, db_loader, newly_trained=False, batch_size=args.db_batch)
 
     # testing
     if args.test:

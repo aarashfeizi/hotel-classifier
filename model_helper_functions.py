@@ -407,7 +407,7 @@ class ModelMethods:
 
         return tests_right, tests_error, test_acc
 
-    def make_emb_db(self, args, net, data_loader, val=False, batch_size=None):
+    def make_emb_db(self, args, net, data_loader, newly_trained=True, batch_size=None):
         """
 
         :param args: utils args
@@ -416,42 +416,44 @@ class ModelMethods:
         :param val: validation or not
         :return: None
         """
-        net.eval()
-        if batch_size is None:
-            batch_size = args.batch_size
 
-        steps = int(np.ceil(len(data_loader) / batch_size))
+        if newly_trained:
+            net.eval()
+            if batch_size is None:
+                batch_size = args.batch_size
 
-        test_classes = np.zeros(((len(data_loader.dataset))))
-        test_seen = np.zeros(((len(data_loader.dataset))))
-        test_paths = np.empty(dtype='S20', shape=((len(data_loader.dataset))))
-        if args.feat_extractor == 'resnet50':
-            test_feats = np.zeros((len(data_loader.dataset), 2048))
-        elif args.feat_extractor == 'resnet18':
-            test_feats = np.zeros((len(data_loader.dataset), 512))
-        else:
-            raise Exception('Not handled feature extractor')
+            steps = int(np.ceil(len(data_loader) / batch_size))
 
-        for idx, (img, lbl, seen, path) in enumerate(data_loader):
+            test_classes = np.zeros(((len(data_loader.dataset))))
+            test_seen = np.zeros(((len(data_loader.dataset))))
+            test_paths = np.empty(dtype='S20', shape=((len(data_loader.dataset))))
+            if args.feat_extractor == 'resnet50':
+                test_feats = np.zeros((len(data_loader.dataset), 2048))
+            elif args.feat_extractor == 'resnet18':
+                test_feats = np.zeros((len(data_loader.dataset), 512))
+            else:
+                raise Exception('Not handled feature extractor')
 
-            if args.cuda:
-                img = img.cuda()
-            img = Variable(img)
+            for idx, (img, lbl, seen, path) in enumerate(data_loader):
 
-            output = net.forward(img, None, single=True)
-            output = output.data.cpu().numpy()
+                if args.cuda:
+                    img = img.cuda()
+                img = Variable(img)
 
-            end = min((idx + 1) * batch_size, len(test_feats))
+                output = net.forward(img, None, single=True)
+                output = output.data.cpu().numpy()
 
-            test_feats[idx * batch_size:end, :] = output
-            test_classes[idx * batch_size:end] = lbl
-            test_paths[idx * batch_size:end] = path
-            test_seen[idx * batch_size:end] = seen.to(int)
+                end = min((idx + 1) * batch_size, len(test_feats))
 
-        utils.save_h5('test_ids', test_paths, 'S20', os.path.join(self.save_path, 'testIds.h5'))
-        utils.save_h5('test_classes', test_classes, 'i8', os.path.join(self.save_path, 'testClasses.h5'))
-        utils.save_h5('test_feats', test_feats, 'f', os.path.join(self.save_path, 'testFeats.h5'))
-        utils.save_h5('test_seen', test_seen, 'i2', os.path.join(self.save_path, 'testSeen.h5'))
+                test_feats[idx * batch_size:end, :] = output
+                test_classes[idx * batch_size:end] = lbl
+                test_paths[idx * batch_size:end] = path
+                test_seen[idx * batch_size:end] = seen.to(int)
+
+            utils.save_h5('test_ids', test_paths, 'S20', os.path.join(self.save_path, 'testIds.h5'))
+            utils.save_h5('test_classes', test_classes, 'i8', os.path.join(self.save_path, 'testClasses.h5'))
+            utils.save_h5('test_feats', test_feats, 'f', os.path.join(self.save_path, 'testFeats.h5'))
+            utils.save_h5('test_seen', test_seen, 'i2', os.path.join(self.save_path, 'testSeen.h5'))
 
         test_feats = utils.load_h5('test_feats', os.path.join(self.save_path, 'testFeats.h5'))
         test_classes = utils.load_h5('test_classes', os.path.join(self.save_path, 'testClasses.h5'))
@@ -460,8 +462,7 @@ class ModelMethods:
         kavg, kruns = utils.get_distance(args, test_feats, test_classes, test_seen, logger=self.logger, limit=args.limit_samples, run_number=args.number_of_runs)
         kavg.to_csv(os.path.join(self.save_path, 'avg_k@n.csv'), header=True, index=False)
         kruns.to_csv(os.path.join(self.save_path, 'runs_k@n.csv'), header=True, index=False)
-        import pdb
-        pdb.set_trace()
+        self.logger.info('results at: ' + self.save_path)
 
     def load_model(self, args, net, best_model):
         checkpoint = torch.load(os.path.join(self.save_path, best_model))
