@@ -131,8 +131,9 @@ class HotelTest(Dataset):
         # generate image pair from same class
         if idx == 0:
             self.c1 = self.labels[random.randint(0, self.num_classes - 1)]
+            c2 = self.c1
             self.img1 = Image.open(random.choice(self.datas[self.c1])).convert('RGB')
-            img2 = Image.open(random.choice(self.datas[self.c1])).convert('RGB')
+            img2 = Image.open(random.choice(self.datas[c2])).convert('RGB')
         # generate image pair from different class
         else:
             c2 = list(self.datas_bg.keys())[random.randint(0, len(self.datas_bg.keys()) - 1)]
