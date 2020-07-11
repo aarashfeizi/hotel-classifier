@@ -21,3 +21,4 @@ tensorboard/
 correct_files/
 index_making_tempfiles/
 *.jpg
+k_at_n_results/

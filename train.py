@@ -6,10 +6,21 @@ from torchvision import transforms
 
 import model_helper_functions
 import utils
-from dataloader import *
+from cub_dataloader import *
+from hotel_dataloader import *
 from models.top_model import *
-import time
-import multiprocessing
+from omniglot_dataloader import *
+
+
+###
+# todo for next week
+
+# fuckin overleaf
+# Average per class for metrics (k@n) ???
+# k@n for training
+# random crop in train
+# visualize images before and after transformation to see what information is lost
+# do NOT transform scale fo validation
 
 
 def _logger():
@@ -36,7 +47,16 @@ def main():
     elif args.dataset_name == 'hotels':
         image_size = 300
 
-    data_transforms = utils.TransformLoader(image_size, rotate=args.rotate).get_composed_transform(aug=args.aug)
+    data_transforms_train, transform_list_train = utils.TransformLoader(image_size,
+                                                                        rotate=args.rotate).get_composed_transform(
+        aug=args.aug, random_crop=True)
+
+    logger.info('train transforms: ', transform_list_train)
+
+    data_transforms_val, transform_list_val = utils.TransformLoader(image_size,
+                                                                    rotate=args.rotate).get_composed_transform(
+        aug=args.aug, random_crop=False)
+    logger.info('val transforms: ', transform_list_val)
 
     # data_transforms = transforms.Compose([
     #     transforms.Resize([int(image_size), int(image_size)]),
@@ -62,45 +82,43 @@ def main():
     if args.dataset_name == 'cub':
 
         if args.dataset_split_type == 'original':
-            train_set = CUBTrain_Top(args, transform=data_transforms)
-            val_set = CUBTest_Fewshot(args, transform=data_transforms, mode='val')
-            test_set = CUBTest_Fewshot(args, transform=data_transforms)
+            train_set = CUBTrain_Top(args, transform=data_transforms_train)
+            val_set = CUBTest_Fewshot(args, transform=data_transforms_val, mode='val')
+            test_set = CUBTest_Fewshot(args, transform=data_transforms_val)
 
         elif args.dataset_split_type == 'new':  # mode = [knwn_cls_test, knwn_cls_val, train, uknwn_cls_test, uknwn_cls_val]
-            train_set = CUBTrain_Top(args, transform=data_transforms, mode='train')
-            val_set_known = CUBTest_Fewshot(args, transform=data_transforms, mode='val_seen')
-            test_set_known = CUBTest_Fewshot(args, transform=data_transforms, mode='test_seen')
-            val_set_unknown = CUBTest_Fewshot(args, transform=data_transforms, mode='val_unseen')
-            test_set_unknown = CUBTest_Fewshot(args, transform=data_transforms, mode='test_unseen')
+            train_set = CUBTrain_Top(args, transform=data_transforms_train, mode='train')
+            val_set_known = CUBTest_Fewshot(args, transform=data_transforms_val, mode='val_seen')
+            test_set_known = CUBTest_Fewshot(args, transform=data_transforms_val, mode='test_seen')
+            val_set_unknown = CUBTest_Fewshot(args, transform=data_transforms_val, mode='val_unseen')
+            test_set_unknown = CUBTest_Fewshot(args, transform=data_transforms_val, mode='test_unseen')
 
     elif args.dataset_name == 'omniglot':
-        train_set = OmniglotTrain(args, transform=data_transforms)
+        train_set = OmniglotTrain(args, transform=data_transforms_train)
         # val_set = CUBTest(args, transform=data_transforms, mode='val')
         test_set = OmniglotTest(args, transform=transforms.ToTensor())
     elif args.dataset_name == 'hotels':
 
-        train_set = HotelTrain(args, transform=data_transforms, mode='train')
+        train_set = HotelTrain(args, transform=data_transforms_train, mode='train')
         print('*' * 10)
-        val_set_known = HotelTest(args, transform=data_transforms, mode='val_seen')
+        val_set_known = HotelTest(args, transform=data_transforms_val, mode='val_seen')
         print('*' * 10)
-        val_set_unknown = HotelTest(args, transform=data_transforms, mode='val_unseen')
+        val_set_unknown = HotelTest(args, transform=data_transforms_val, mode='val_unseen')
         print('*' * 10)
 
         if args.test:
-            test_set_known = HotelTest(args, transform=data_transforms, mode='test_seen')
+            test_set_known = HotelTest(args, transform=data_transforms_val, mode='test_seen')
             print('*' * 10)
-            test_set_unknown = HotelTest(args, transform=data_transforms, mode='test_unseen')
+            test_set_unknown = HotelTest(args, transform=data_transforms_val, mode='test_unseen')
             print('*' * 10)
 
         if args.cbir:
-            db_set = Hotel_DB(args, transform=data_transforms, mode='val')
-            db_set_seen = Hotel_DB(args, transform=data_transforms, mode='val_seen')
-            db_set_unseen = Hotel_DB(args, transform=data_transforms, mode='val_unseen')
+            db_set = Hotel_DB(args, transform=data_transforms_val, mode='val')
 
     else:
-        print('Fuck: ', args.dataset_name)
+        logger.error(f'Dataset not suppored:  {args.dataset_name}')
 
-    print('way:', args.way)
+    logger.info(f'few shot evaluation way: {args.way}')
 
     # train_classify_loader = DataLoader(train_classification_dataset, batch_size=args.batch_size, shuffle=False,
     #                                    num_workers=args.workers)
@@ -132,18 +150,13 @@ def main():
     if args.cbir:
         db_loader = DataLoader(db_set, batch_size=args.db_batch, shuffle=False, num_workers=workers,
                                pin_memory=pin_memory)
-        db_loader_seen = DataLoader(db_set_seen, batch_size=args.db_batch, shuffle=False, num_workers=workers,
-                                    pin_memory=pin_memory)
-        db_loader_unseen = DataLoader(db_set_unseen, batch_size=args.db_batch, shuffle=False, num_workers=workers,
-                                      pin_memory=pin_memory)
 
     loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean')
 
     # train resnet
 
     num_classes = train_set.num_classes
-    logger.info('Num classes in train:')
-    print(num_classes)
+    logger.info(f'Num classes in train: {num_classes}')
     #
     # print('num_classes', num_classes)
     #

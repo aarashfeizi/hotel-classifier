@@ -1,14 +1,16 @@
 import argparse
+import json
 import multiprocessing
+import os
 import time
 
 import h5py
-import torch
-from torch.utils.data import DataLoader
-from torchvision.transforms import transforms
-from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import pandas as pd
+import torch
+from sklearn.metrics.pairwise import cosine_similarity
+from torch.utils.data import DataLoader
+from torchvision.transforms import transforms
 
 try:
     from torch.hub import load_state_dict_from_url
@@ -44,27 +46,25 @@ class TransformLoader:
         else:
             return method()
 
-    ###
-    # todo for next week
-
-    # fuckin overleaf
-    # Average per class for metrics (k@n)
-    # k@n for training
-    # random crop in train
-    # visualize images before and after transformation to see what information is lost
-    # do NOT transform scale fo validation
-
-    def get_composed_transform(self, aug=False):
+    def get_composed_transform(self, aug=False, random_crop=False):
+        transform_list = []
         if aug:
-            transform_list = ['RandomSizedCrop', 'ImageJitter', 'RandomHorizontalFlip', 'ToTensor', 'Normalize']
+            transform_list = ['RandomSizedCrop', 'ImageJitter', 'RandomHorizontalFlip']
         elif not aug and self.rotate == 0:
-            transform_list = ['Scale', 'CenterCrop', 'ToTensor', 'Normalize']
+            transform_list = ['Scale']
         elif not aug and self.rotate != 0:
-            transform_list = ['Scale', 'RandomRotation', 'CenterCrop', 'ToTensor', 'Normalize']
+            transform_list = ['Scale', 'RandomRotation']
+
+        if random_crop:
+            transform_list.extend(['RandomSizedCrop'])
+        else:
+            transform_list.extend(['CenterCrop'])
+
+        transform_list.extend(['ToTensor', 'Normalize'])
 
         transform_funcs = [self.parse_transform(x) for x in transform_list]
         transform = transforms.Compose(transform_funcs)
-        return transform
+        return transform, transform_list
 
 
 class Metric:
@@ -440,3 +440,145 @@ def get_distance(args, img_feats, img_lbls, seen_list, logger, limit=0, run_numb
                                      'avg_kAT100_unseen': [np.array(k100s_u).mean()]})
 
     return average_tot, pd.DataFrame(data=d)
+
+
+def get_shuffled_data(datas, seed=0, one_hot=True, both_seen_unseen=False, shuffle=True):  # for sequential labels only
+
+    labels = sorted(datas.keys())
+
+    if one_hot:
+        lbl2idx = {labels[idx]: idx for idx in range(len(labels))}
+        one_hot_labels = np.eye(len(np.unique(labels)))
+    # print(one_hot_labels)
+
+    np.random.seed(seed)
+
+    data = []
+    for key, value_list in datas.items():
+        if one_hot:
+            lbl = one_hot_labels[lbl2idx[key]]
+        else:
+            lbl = key
+
+        if both_seen_unseen:
+            ls = [(lbl, value, bl) for value, bl in value_list]  # todo to be able to separate seen and unseen in k@n
+        else:
+            ls = [(lbl, value) for value in value_list]
+
+        data.extend(ls)
+
+    if shuffle:
+        np.random.shuffle(data)
+
+    return data
+
+
+def _read_org_split(dataset_path, mode):
+    image_labels = []
+    image_path = []
+
+    if mode == 'train':  # train
+
+        with open(os.path.join(dataset_path, 'base.json'), 'r') as f:
+            base_dict = json.load(f)
+        image_labels.extend(base_dict['image_labels'])
+        image_path.extend(base_dict['image_names'])
+
+    elif mode == 'val':  # val
+
+        with open(os.path.join(dataset_path, 'val.json'), 'r') as f:
+            val_dict = json.load(f)
+        image_labels.extend(val_dict['image_labels'])
+        image_path.extend(val_dict['image_names'])
+
+    elif mode == 'test':  # novel classes
+
+        with open(os.path.join(dataset_path, 'novel.json'), 'r') as f:
+            novel_dict = json.load(f)
+        image_labels.extend(novel_dict['image_labels'])
+        image_path.extend(novel_dict['image_names'])
+
+    return image_path, image_labels
+
+
+def _read_new_split(dataset_path, mode,
+                    dataset_name='cub'):  # mode = [test_seen, val_seen, train, test_unseen, test_unseen]
+
+    file_name = f'{dataset_name}_' + mode + '.csv'
+
+    file = pd.read_csv(os.path.join(dataset_path, file_name))
+    image_labels = np.array(file.label)
+    image_path = np.array(file.image)
+
+    return image_path, image_labels
+
+
+def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_name='final_newsplits0_1',
+                  portion=0, return_paths=False):
+    print(split_file_name, '!!!!!!!!')
+    if dataset_name == 'cub':
+        dataset_path = os.path.join(dataPath, 'CUB')
+    elif dataset_name == 'hotels':
+        dataset_path = os.path.join(dataPath, 'hotels_trainval')
+
+    background_datasets = {'val_seen': 'val_unseen',
+                           'val_unseen': 'val_seen',
+                           'test_seen': 'test_unseen',
+                           'test_unseen': 'test_seen'}
+
+    print("begin loading dataset to memory")
+    datas = {}
+    datas_bg = {}  # in case of mode == val/test_seen/unseen
+
+    if split_type == 'original':
+        image_path, image_labels = _read_org_split(dataset_path, mode)
+    elif split_type == 'new':
+        image_path, image_labels = _read_new_split(os.path.join(dataset_path, split_file_name), mode, dataset_name)
+        if mode != 'train':
+            image_path_bg, image_labels_bg = _read_new_split(os.path.join(dataset_path, split_file_name),
+                                                             background_datasets[mode], dataset_name)
+
+    if portion > 0:
+        image_path = image_path[image_labels < portion]
+        image_labels = image_labels[image_labels < portion]
+
+        if mode != 'train':
+            image_path_bg = image_path_bg[image_labels_bg < portion]
+            image_labels_bg = image_labels_bg[image_labels_bg < portion]
+
+    print(f'{mode} number of imgs:', len(image_labels))
+    print(f'{mode} number of labels:', len(np.unique(image_labels)))
+
+    if mode != 'train':
+        print(f'{mode} number of bg imgs:', len(image_labels_bg))
+        print(f'{mode} number of bg lbls:', len(np.unique(image_labels_bg)))
+
+    num_instances = len(image_labels)
+
+    num_classes = len(np.unique(image_labels))
+
+    for idx, path in zip(image_labels, image_path):
+        if idx not in datas.keys():
+            datas[idx] = []
+            if mode != 'train':
+                datas_bg[idx] = []
+
+        datas[idx].append(os.path.join(dataset_path, path))
+        if mode != 'train':
+            datas_bg[idx].append((os.path.join(dataset_path, path), True))
+
+    if mode != 'train':
+        for idx, path in zip(image_labels_bg, image_path_bg):
+            if idx not in datas_bg.keys():
+                datas_bg[idx] = []
+            datas_bg[idx].append((os.path.join(dataset_path, path), False))
+
+    labels = np.unique(image_labels)
+    print(f'Number of labels in {mode}: ', len(labels))
+
+    if mode != 'train':
+        all_labels = np.unique(np.concatenate((image_labels, image_labels_bg)))
+        print(f'Number of all labels (bg + fg) in {mode} and {background_datasets[mode]}: ', len(all_labels))
+
+    print(f'finish loading {mode} dataset to memory')
+    return datas, num_classes, num_instances, labels, datas_bg
