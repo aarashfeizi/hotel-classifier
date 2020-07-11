@@ -51,12 +51,12 @@ def main():
                                                                         rotate=args.rotate).get_composed_transform(
         aug=args.aug, random_crop=True)
 
-    logger.info('train transforms: ', transform_list_train)
+    logger.info(f'train transforms: {transform_list_train}')
 
     data_transforms_val, transform_list_val = utils.TransformLoader(image_size,
                                                                     rotate=args.rotate).get_composed_transform(
         aug=args.aug, random_crop=False)
-    logger.info('val transforms: ', transform_list_val)
+    logger.info(f'val transforms: {transform_list_val}')
 
     # data_transforms = transforms.Compose([
     #     transforms.Resize([int(image_size), int(image_size)]),
