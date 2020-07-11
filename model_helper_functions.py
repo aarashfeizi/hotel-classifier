@@ -50,17 +50,17 @@ class ModelMethods:
         name = 'model-' + self.model
 
         important_args = ['dataset_name',
-                          'aug',
-                          'rotate',
+                          # 'aug',
+                          # 'rotate',
                           'batch_size',
                           'lr_siamese',
                           'lr_resnet',
                           'early_stopping',
-                          'sigmoid',
-                          'freeze_ext',
+                          # 'sigmoid',
+                          # 'freeze_ext',
                           'feat_extractor',
                           'extra_layer',
-                          'dataset_split_type',
+                          # 'dataset_split_type',
                           'normalize',
                           'limit_samples',
                           'number_of_runs']
