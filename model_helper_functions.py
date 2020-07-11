@@ -55,13 +55,15 @@ class ModelMethods:
                           'batch_size',
                           'lr_siamese',
                           'lr_resnet',
-                          'ep',
+                          'early_stopping',
                           'sigmoid',
                           'freeze_ext',
                           'feat_extractor',
                           'extra_layer',
                           'dataset_split_type',
-                          'normalize']
+                          'normalize',
+                          'limit_samples',
+                          'number_of_runs']
 
         for arg in vars(args):
             if str(arg) in important_args:
