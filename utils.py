@@ -33,11 +33,11 @@ class TransformLoader:
         #     method = add_transforms.ImageJitter(self.jitter_param)
         #     return method
         method = getattr(transforms, transform_type)
-        if transform_type == 'RandomSizedCrop':
+        if transform_type == 'RandomResizedCrop':
             return method(self.image_size)
         elif transform_type == 'CenterCrop':
             return method(self.image_size)
-        elif transform_type == 'Scale':
+        elif transform_type == 'Resize':
             return method([int(self.image_size * 1.15), int(self.image_size * 1.15)])
         elif transform_type == 'Normalize':
             return method(**self.normalize_param)
@@ -49,14 +49,14 @@ class TransformLoader:
     def get_composed_transform(self, aug=False, random_crop=False):
         transform_list = []
         if aug:
-            transform_list = ['RandomSizedCrop', 'ImageJitter', 'RandomHorizontalFlip']
+            transform_list = ['RandomResizedCrop', 'ImageJitter', 'RandomHorizontalFlip']
         elif not aug and self.rotate == 0:
-            transform_list = ['Scale']
+            transform_list = ['Resize']
         elif not aug and self.rotate != 0:
-            transform_list = ['Scale', 'RandomRotation']
+            transform_list = ['Resize', 'RandomRotation']
 
         if random_crop:
-            transform_list.extend(['RandomSizedCrop'])
+            transform_list.extend(['RandomResizedCrop'])
         else:
             transform_list.extend(['CenterCrop'])
 

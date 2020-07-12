@@ -62,7 +62,7 @@ class HotelTrain(Dataset):
         image2 = image2.convert('RGB')
         save = False
         if self.transform:
-            if random.random() < 0.0001:
+            if self.save_pictures and random.random() < 0.0001:
                 save = True
                 img1_random = random.randint(0, 1000)
                 img2_random = random.randint(0, 1000)
@@ -104,10 +104,11 @@ class HotelTrain(Dataset):
 
 class HotelTest(Dataset):
 
-    def __init__(self, args, transform=None, mode='test_seen'):
+    def __init__(self, args, transform=None, mode='test_seen', save_pictures=False):
         np.random.seed(args.seed)
         super(HotelTest, self).__init__()
         self.transform = transform
+        self.save_pictures = save_pictures
         self.times = args.times
         self.way = args.way
         self.img1 = None
@@ -143,7 +144,7 @@ class HotelTest(Dataset):
 
         save = False
         if self.transform:
-            if random.random() < 0.001:
+            if self.save_pictures and random.random() < 0.001:
                 save = True
                 img1_random = random.randint(0, 1000)
                 img2_random = random.randint(0, 1000)

@@ -20,7 +20,7 @@ from omniglot_dataloader import *
 # k@n for training
 # random crop in train
 # visualize images before and after transformation to see what information is lost
-# do NOT transform scale fo validation
+# do NOT transform scale for validation
 
 
 def _logger():
@@ -58,15 +58,6 @@ def main():
         aug=args.aug, random_crop=False)
     logger.info(f'val transforms: {transform_list_val}')
 
-    # data_transforms = transforms.Compose([
-    #     transforms.Resize([int(image_size), int(image_size)]),
-    #     transforms.RandomAffine(15),
-    #     transforms.ToTensor()
-    # ])
-
-    # train_dataset = dset.ImageFolder(root=Flags.train_path)
-    # test_dataset = dset.ImageFolder(root=Flags.test_path)
-
     if args.gpu_ids != '':
         os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_ids
         print("use gpu:", args.gpu_ids, "to train.")
@@ -99,11 +90,11 @@ def main():
         test_set = OmniglotTest(args, transform=transforms.ToTensor())
     elif args.dataset_name == 'hotels':
 
-        train_set = HotelTrain(args, transform=data_transforms_train, mode='train')
+        train_set = HotelTrain(args, transform=data_transforms_train, mode='train', save_pictures=True)
         print('*' * 10)
-        val_set_known = HotelTest(args, transform=data_transforms_val, mode='val_seen')
+        val_set_known = HotelTest(args, transform=data_transforms_val, mode='val_seen', save_pictures=True)
         print('*' * 10)
-        val_set_unknown = HotelTest(args, transform=data_transforms_val, mode='val_unseen')
+        val_set_unknown = HotelTest(args, transform=data_transforms_val, mode='val_unseen', save_pictures=True)
         print('*' * 10)
 
         if args.test:
@@ -157,28 +148,6 @@ def main():
 
     num_classes = train_set.num_classes
     logger.info(f'Num classes in train: {num_classes}')
-    #
-    # print('num_classes', num_classes)
-    #
-    # feat_ext = resnet18(pretrained=True, num_classes=num_classes)
-    #
-    # if len(args.gpu_ids.split(",")) > 1:
-    #     feat_ext = torch.nn.DataParallel(feat_ext)
-    #
-    # if args.cuda:
-    #     feat_ext.cuda()
-    #
-    # model_methods = model_helper_functions.ModelMethods(args, logger, 'res')
-    #
-    # logger.info('Training Res')
-    # feat_net = model_methods.train_classify(feat_ext, loss_fn, args, train_classify_loader, None)
-    #
-    # ################################
-    #
-    # print('loading trained feature model')
-    # feat_net = model_methods.load_model(args, feat_net, best_res_model)
-    #
-    # print('loading trained feature model done!')
 
     model_methods_top = model_helper_functions.ModelMethods(args, logger, 'top')
     # tm_net = top_module(args=args, trained_feat_net=feat_net, num_classes=num_classes)
