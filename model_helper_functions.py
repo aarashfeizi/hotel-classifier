@@ -23,7 +23,6 @@ class ModelMethods:
         self.model = model
         self.model_name = self._parse_args(args)
 
-
         self.tensorboard_path = os.path.join(args.tb_path, self.model_name + id_str)
         self.logger = logger
         self.writer = SummaryWriter(self.tensorboard_path)
@@ -36,13 +35,13 @@ class ModelMethods:
 
         self.new_split_type = args.dataset_split_type == 'new'
 
-
         self.logger.info("** Save path: " + self.save_path)
         self.logger.info("** Tensorboard path: " + self.tensorboard_path)
 
         if not os.path.exists(self.save_path):
             os.mkdir(self.save_path)
-            self.logger.info(f'Created save and tensorboard directories:\n{self.save_path}\nand\n{self.tensorboard_path}')
+            self.logger.info(
+                f'Created save and tensorboard directories:\n{self.save_path}\nand\n{self.tensorboard_path}')
         else:
             self.logger.info(f'Save directory {self.save_path} already exists, but how?? {id_str}')  # almost impossible
 
@@ -461,9 +460,13 @@ class ModelMethods:
         test_classes = utils.load_h5('test_classes', os.path.join(self.save_path, 'testClasses.h5'))
         test_seen = utils.load_h5('test_seen', os.path.join(self.save_path, 'testSeen.h5'))
 
-        kavg, kruns = utils.get_distance(args, test_feats, test_classes, test_seen, logger=self.logger, limit=args.limit_samples, run_number=args.number_of_runs)
-        kavg.to_csv(os.path.join(self.save_path, 'avg_k@n.csv'), header=True, index=False)
-        kruns.to_csv(os.path.join(self.save_path, 'runs_k@n.csv'), header=True, index=False)
+        utils.calculate_k_at_n(args, test_feats, test_classes, test_seen, logger=self.logger,
+                               limit=args.limit_samples,
+                               run_number=args.number_of_runs,
+                               save_path=self.save_path,
+                               sampled=args.sampled_results,
+                               per_class=args.per_class_results)
+
         self.logger.info('results at: ' + self.save_path)
 
     def load_model(self, args, net, best_model):

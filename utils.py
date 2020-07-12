@@ -101,7 +101,7 @@ class Metric:
 
 class Percision_At_K():
 
-    def __init__(self):
+    def __init__(self, classes=np.array([])):
         self.k1 = 0
         self.k5 = 0
         self.k10 = 0
@@ -114,26 +114,43 @@ class Percision_At_K():
 
         self.n = 0
 
+        self.classes = classes
+        self.class_tot = len(self.classes)
+        self.lbl2idx = {c: i for i, c in enumerate(self.classes)}
+        self.per_class_k1 = np.zeros(shape=self.class_tot)  # col1: kns
+        self.per_class_k5 = np.zeros(shape=self.class_tot)  # col1: kns
+        self.per_class_k10 = np.zeros(shape=self.class_tot)  # col1: kns
+        self.per_class_k100 = np.zeros(shape=self.class_tot)  # col1: kns
+
+        self.per_class_n = np.zeros(shape=self.class_tot)
+
     def update(self, lbl, ret_lbls):
         # all_lbl = sum(ret_lbls == lbl)
         if lbl == ret_lbls[0]:
             self.k1 += 1
-            # self.r1 += (1 / all_lbl)
+            self.per_class_k1[self.lbl2idx[lbl]] += 1
+
         if lbl in ret_lbls[:5]:
             self.k5 += 1
+            self.per_class_k5[self.lbl2idx[lbl]] += 1
+
         if lbl in ret_lbls[:10]:
             self.k10 += 1
+            self.per_class_k10[self.lbl2idx[lbl]] += 1
+
         if lbl in ret_lbls[:100]:
             self.k100 += 1
+            self.per_class_k100[self.lbl2idx[lbl]] += 1
 
         # self.r5 += (sum(ret_lbls[:5] == lbl) / all_lbl)
         # self.r10 += (sum(ret_lbls[:10] == lbl) / all_lbl)
         # self.r100 += (sum(ret_lbls[:100] == lbl) / all_lbl)
 
         self.n += 1
+        self.per_class_n[self.lbl2idx[lbl]] += 1
 
     def __str__(self):
-        k1, k5, k10, k100 = self.get_metrics()
+        k1, k5, k10, k100 = self.get_tot_metrics()
 
         return f'k@1 = {k1}\n' \
                f'k@5 = {k5}\n' \
@@ -144,11 +161,36 @@ class Percision_At_K():
         # f'recall@10 = {r10}\n' \
         # f'recall@100 = {r100}\n'
 
-    def get_metrics(self):
+    def get_tot_metrics(self):
         return (self.k1 / self.n), \
                (self.k5 / self.n), \
                (self.k10 / self.n), \
                (self.k100 / self.n)
+
+    def get_per_class_metrics(self):
+
+        assert sum(self.per_class_n) == self.n
+        assert sum(self.per_class_k1) == self.k1
+        assert sum(self.per_class_k5) == self.k5
+        assert sum(self.per_class_k10) == self.k10
+        assert sum(self.per_class_k100) == self.k100
+
+        k1s, k5s, k10s, k100s = (self.per_class_k1 / self.per_class_n), \
+                                (self.per_class_k5 / self.per_class_n), \
+                                (self.per_class_k10 / self.per_class_n), \
+                                (self.per_class_k100 / self.per_class_n)
+
+        d = {'label': self.classes,
+             'n': self.per_class_n,
+             'k@1': k1s,
+             'k@5': k5s,
+             'k@10': k10s,
+             'k@100': k100s}
+
+        df = pd.DataFrame(data=d)
+
+        return df
+
         # self.r1, self.r5, self.r10, self.r100
 
 
@@ -204,17 +246,11 @@ def get_args():
     parser.add_argument('-tst', '--test', default=False, action='store_true')
     parser.add_argument('-katn', '--katn', default=False, action='store_true')
     parser.add_argument('-cbir', '--cbir', default=False, action='store_true')
+    parser.add_argument('-sr', '--sampled_results', default=True, action='store_true')
+    parser.add_argument('-pcr', '--per_class_results', default=True, action='store_true')
     parser.add_argument('-ptb', '--project_tb', default=False, action='store_true')
 
-    parser.add_argument('-1cf', '--first_conv_filter', default=10, type=int, help="")
-    parser.add_argument('-2cf', '--second_conv_filter', default=7, type=int, help="")
-    parser.add_argument('-3cf', '--third_conv_filter', default=4, type=int, help="")
-    parser.add_argument('-4cf', '--fourth_conv_filter', default=4, type=int, help="")
-    parser.add_argument('-5cf', '--fifth_conv_filter', default=0, type=int, help="")
-    parser.add_argument('-6cf', '--sixth_conv_filter', default=0, type=int, help="")
-    parser.add_argument('-7cf', '--seventh_conv_filter', default=0, type=int, help="")
-    parser.add_argument('-co', '--conv_output', default=2304, type=int, help="")
-    parser.add_argument('-ll', '--last_layer', default=4096, type=int, help="number of last layer neurons.")
+
     parser.add_argument('-n', '--normalize', default=False, action='store_true')
 
     args = parser.parse_args()
@@ -311,8 +347,85 @@ def load_h5(data_description, path):
     return data
 
 
-def get_distance(args, img_feats, img_lbls, seen_list, logger, limit=0, run_number=0):
+def calculate_k_at_n(args, img_feats, img_lbls, seen_list, logger, limit=0, run_number=0, sampled=True,
+                     per_class=False, save_path=''):
+
+    if per_class:
+        total, seen, unseen = _get_per_class_distance(args, img_feats, img_lbls, seen_list, logger)
+        total.to_csv(os.path.join(save_path, 'per_class_total_avg_k@n.csv'), header=True, index=False)
+        seen.to_csv(os.path.join(save_path, 'per_class_seen_avg_k@n.csv'), header=True, index=False)
+        unseen.to_csv(os.path.join(save_path, 'per_class_unseen_avg_k@n.csv'), header=True, index=False)
+
+    if sampled:
+        kavg, kruns = _get_sampled_distance(args, img_feats, img_lbls, seen_list, logger, limit, run_number)
+        kavg.to_csv(os.path.join(save_path, 'sampled_avg_k@n.csv'), header=True, index=False)
+        kruns.to_csv(os.path.join(save_path, 'sampled_runs_k@n.csv'), header=True, index=False)
+
+
+    return True
+
+
+def _get_per_class_distance(args, img_feats, img_lbls, seen_list, logger):
     all_lbls = np.unique(img_lbls)
+    seen_lbls = np.unique(img_lbls[seen_list == 1])
+    unseen_lbls = np.unique(img_lbls[seen_list == 0])
+
+    sim_mat = cosine_similarity(img_feats)
+
+    metric_total = Percision_At_K(classes=np.array(all_lbls))
+    metric_seen = Percision_At_K(classes=np.array(seen_lbls))
+    metric_unseen = Percision_At_K(classes=np.array(unseen_lbls))
+
+    for idx, (row, lbl, seen) in enumerate(zip(sim_mat, img_lbls, seen_list)):
+        ret_scores = np.delete(row, idx)
+        ret_lbls = np.delete(img_lbls, idx)
+        ret_seens = np.delete(seen_list, idx)
+
+        ret_lbls = [x for _, x in sorted(zip(ret_scores, ret_lbls), reverse=True)]
+        ret_lbls = np.array(ret_lbls)
+
+        metric_total.update(lbl, ret_lbls)
+
+        if seen == 1:
+            metric_seen.update(lbl, ret_lbls[ret_seens == 1])
+        else:
+            metric_unseen.update(lbl, ret_lbls[ret_seens == 0])
+
+    total = metric_total.get_per_class_metrics()
+    seen = metric_seen.get_per_class_metrics()
+    unseen = metric_unseen.get_per_class_metrics()
+
+    logger.info('Without sampling Total: ' + str(metric_total.n))
+    logger.info(metric_total)
+
+    _log_per_class(logger, total, split_kind='Total')
+
+    logger.info('Without sampling Seen: ' + str(metric_seen.n))
+    logger.info(metric_seen)
+
+    _log_per_class(logger, seen, split_kind='Seen')
+
+    logger.info('Without sampling Unseen: ' + str(metric_unseen.n))
+    logger.info(metric_unseen)
+
+    _log_per_class(logger, unseen, split_kind='Unseen')
+
+    return total, seen, unseen
+
+
+def _log_per_class(logger, df, split_kind=''):
+    logger.info(f'Per class {split_kind}: {np.array(df["n"]).sum()}')
+    logger.info(f'Average per class {split_kind}: {np.array(df["n"]).mean()}')
+    logger.info(f'k@1 per class average: {np.array(df["k@1"]).mean()}')
+    logger.info(f'k@5 per class average: {np.array(df["k@5"]).mean()}')
+    logger.info(f'k@10 per class average: {np.array(df["k@10"]).mean()}')
+    logger.info(f'k@100 per class average: {np.array(df["k@100"]).mean()}\n')
+
+
+def _get_sampled_distance(args, img_feats, img_lbls, seen_list, logger, limit=0, run_number=0):
+    all_lbls = np.unique(img_lbls)
+    seen_lbls = np.unique(img_lbls[seen_list == 1])
+    unseen_lbls = np.unique(img_lbls[seen_list == 0])
 
     k1s = []
     k5s = []
@@ -345,9 +458,9 @@ def get_distance(args, img_feats, img_lbls, seen_list, logger, limit=0, run_numb
         assert np.array_equal(sampled_labels, chosen_img_lbls)
 
         sim_mat = cosine_similarity(chosen_img_feats)
-        metric_total = Percision_At_K()
-        metric_seen = Percision_At_K()
-        metric_unseen = Percision_At_K()
+        metric_total = Percision_At_K(classes=all_lbls)
+        metric_seen = Percision_At_K(classes=seen_lbls)
+        metric_unseen = Percision_At_K(classes=unseen_lbls)
 
         for idx, (row, lbl, seen) in enumerate(zip(sim_mat, chosen_img_lbls, chosen_seen_list)):
             ret_scores = np.delete(row, idx)
@@ -366,7 +479,7 @@ def get_distance(args, img_feats, img_lbls, seen_list, logger, limit=0, run_numb
 
         logger.info('Total: ' + str(metric_total.n))
         logger.info(metric_total)
-        k1, k5, k10, k100 = metric_total.get_metrics()
+        k1, k5, k10, k100 = metric_total.get_tot_metrics()
         k1s.append(k1)
         k5s.append(k5)
         k10s.append(k10)
@@ -375,7 +488,7 @@ def get_distance(args, img_feats, img_lbls, seen_list, logger, limit=0, run_numb
 
         logger.info('Seen: ' + str(metric_seen.n))
         logger.info(metric_seen)
-        k1, k5, k10, k100 = metric_seen.get_metrics()
+        k1, k5, k10, k100 = metric_seen.get_tot_metrics()
         k1s_s.append(k1)
         k5s_s.append(k5)
         k10s_s.append(k10)
@@ -384,7 +497,7 @@ def get_distance(args, img_feats, img_lbls, seen_list, logger, limit=0, run_numb
 
         logger.info('Unseen: ' + str(metric_unseen.n))
         logger.info(metric_unseen)
-        k1, k5, k10, k100 = metric_unseen.get_metrics()
+        k1, k5, k10, k100 = metric_unseen.get_tot_metrics()
         k1s_u.append(k1)
         k5s_u.append(k5)
         k10s_u.append(k10)
