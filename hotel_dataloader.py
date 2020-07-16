@@ -15,6 +15,9 @@ class HotelTrain(Dataset):
         np.random.seed(args.seed)
         self.transform = transform
         self.save_pictures = save_pictures
+        self.class1 = 0
+        self.image1 = None
+        self.no_negative = args.no_negative
 
         self.datas, self.num_classes, self.length, self.labels, _ = loadDataToMem(args.dataset_path, args.dataset_name,
                                                                                   args.dataset_split_type,
@@ -36,29 +39,30 @@ class HotelTrain(Dataset):
         img1 = None
         img2 = None
         # get image from same class
-        if index % 2 == 1:
+        if index % (self.no_negative + 1) == 0:
             label = 1.0
             idx1 = random.randint(0, self.num_classes - 1)
-            class1 = self.labels[idx1]
-            class2 = class1
-            image1 = Image.open(random.choice(self.datas[class1]))
+            self.class1 = self.labels[idx1]
+            class2 = self.class1
+            self.image1 = Image.open(random.choice(self.datas[self.class1]))
             image2 = Image.open(random.choice(self.datas[class2]))
         # get image from different class
         else:
             label = 0.0
-            idx1 = random.randint(0, self.num_classes - 1)
+            # idx1 = random.randint(0, self.num_classes - 1)
             idx2 = random.randint(0, self.num_classes - 1)
-
-            while idx1 == idx2:
-                idx2 = random.randint(0, self.num_classes - 1)
-
-            class1 = self.labels[idx1]
             class2 = self.labels[idx2]
 
-            image1 = Image.open(random.choice(self.datas[class1]))
+            while self.class1 == class2:
+                idx2 = random.randint(0, self.num_classes - 1)
+                class2 = self.labels[idx2]
+
+            # class1 = self.labels[idx1]
+
+            # image1 = Image.open(random.choice(self.datas[self.class1]))
             image2 = Image.open(random.choice(self.datas[class2]))
 
-        image1 = image1.convert('RGB')
+        image1 = self.image1.convert('RGB')
         image2 = image2.convert('RGB')
         save = False
         if self.transform:
@@ -212,4 +216,4 @@ class Hotel_DB(Dataset):
         if self.transform:
             img = self.transform(img)
 
-        return img, lbl, bl, id  # todo bl?
+        return img, lbl, bl, id

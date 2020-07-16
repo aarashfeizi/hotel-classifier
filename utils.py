@@ -226,6 +226,7 @@ def get_args():
     parser.add_argument('-fr', '--freeze_ext', default=False, action='store_true')
     parser.add_argument('-el', '--extra_layer', default=0, type=int,
                         help="Number of 512 extra layers in the Li-Siamese")
+    parser.add_argument('-nn', '--no_negative', default=1, type=int)
 
     parser.add_argument('-s', '--seed', default=402, type=int, help="random seed")
     parser.add_argument('-w', '--way', default=20, type=int, help="how much way one-shot learning")
@@ -249,7 +250,6 @@ def get_args():
     parser.add_argument('-sr', '--sampled_results', default=True, action='store_true')
     parser.add_argument('-pcr', '--per_class_results', default=True, action='store_true')
     parser.add_argument('-ptb', '--project_tb', default=False, action='store_true')
-
 
     parser.add_argument('-n', '--normalize', default=False, action='store_true')
 
@@ -349,7 +349,6 @@ def load_h5(data_description, path):
 
 def calculate_k_at_n(args, img_feats, img_lbls, seen_list, logger, limit=0, run_number=0, sampled=True,
                      per_class=False, save_path=''):
-
     if per_class:
         total, seen, unseen = _get_per_class_distance(args, img_feats, img_lbls, seen_list, logger)
         total.to_csv(os.path.join(save_path, 'per_class_total_avg_k@n.csv'), header=True, index=False)
@@ -360,7 +359,6 @@ def calculate_k_at_n(args, img_feats, img_lbls, seen_list, logger, limit=0, run_
         kavg, kruns = _get_sampled_distance(args, img_feats, img_lbls, seen_list, logger, limit, run_number)
         kavg.to_csv(os.path.join(save_path, 'sampled_avg_k@n.csv'), header=True, index=False)
         kruns.to_csv(os.path.join(save_path, 'sampled_runs_k@n.csv'), header=True, index=False)
-
 
     return True
 
