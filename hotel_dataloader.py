@@ -15,8 +15,6 @@ class HotelTrain(Dataset):
         np.random.seed(args.seed)
         self.transform = transform
         self.save_pictures = save_pictures
-        self.class1 = 0
-        self.image1 = None
         self.no_negative = args.no_negative
 
         self.datas, self.num_classes, self.length, self.labels, _ = loadDataToMem(args.dataset_path, args.dataset_name,
@@ -39,48 +37,67 @@ class HotelTrain(Dataset):
         img1 = None
         img2 = None
         # get image from same class
-        if index % (self.no_negative + 1) == 0:
-            label = 1.0
-            idx1 = random.randint(0, self.num_classes - 1)
-            self.class1 = self.labels[idx1]
-            class2 = self.class1
-            self.image1 = Image.open(random.choice(self.datas[self.class1]))
-            image2 = Image.open(random.choice(self.datas[class2]))
-        # get image from different class
-        else:
-            label = 0.0
+        # if index % (self.no_negative + 1) == 0:
+
+        lbls = []
+
+        idx1 = random.randint(0, self.num_classes - 1)
+        class1 = self.labels[idx1]
+        main_image = Image.open(random.choice(self.datas[class1]))
+        main_image = main_image.convert('RGB')
+
+        # get positive example
+        pos_img = Image.open(random.choice(self.datas[class1])).convert('RGB')
+        pos_img = pos_img.convert('RGB')
+        pos = [pos_img]
+
+        lbls.append(1)
+
+        neg = []
+
+        for i in range(self.no_negative):
             # idx1 = random.randint(0, self.num_classes - 1)
             idx2 = random.randint(0, self.num_classes - 1)
             class2 = self.labels[idx2]
 
-            while self.class1 == class2:
+            while class1 == class2:
                 idx2 = random.randint(0, self.num_classes - 1)
                 class2 = self.labels[idx2]
 
-            # class1 = self.labels[idx1]
+            neg_img = Image.open(random.choice(self.datas[class2]))
+            neg_img = neg_img.convert('RGB')
+            neg.append(neg_img)
+            lbls.append(0)
 
-            # image1 = Image.open(random.choice(self.datas[self.class1]))
-            image2 = Image.open(random.choice(self.datas[class2]))
 
-        image1 = self.image1.convert('RGB')
-        image2 = image2.convert('RGB')
+
         save = False
         if self.transform:
             if self.save_pictures and random.random() < 0.0001:
                 save = True
                 img1_random = random.randint(0, 1000)
                 img2_random = random.randint(0, 1000)
-                image1.save(f'hotel_imagesamples/train/train_{self.class1}_{img1_random}_before.png')
-                image2.save(f'hotel_imagesamples/train/train_{class2}_{img2_random}_before.png')
+                pos[0].save(f'hotel_imagesamples/train/train_{class1}_{img1_random}_before.png')
+                neg[0].save(f'hotel_imagesamples/train/train_{class2}_{img2_random}_before.png')
 
-            image2 = self.transform(image2)
-            image1 = self.transform(image1)
+            main_image = self.transform(main_image)
+
+            pos[0] = self.transform(pos[0])
+
+            for i, neg_i in enumerate(neg):
+                neg[i] = self.transform(neg_i)
+
+
+            neg = torch.stack(neg)
+            pos = torch.stack(pos)
+
+
 
             if save:
-                save_image(image1, f'hotel_imagesamples/train/train_{self.class1}_{img1_random}_after.png')
-                save_image(image2, f'hotel_imagesamples/train/train_{class2}_{img2_random}_after.png')
+                save_image(pos[0], f'hotel_imagesamples/train/train_{class1}_{img1_random}_after.png')
+                save_image(neg[0], f'hotel_imagesamples/train/train_{class2}_{img2_random}_after.png')
 
-        return image1, image2, torch.from_numpy(np.array([label], dtype=np.float32))
+        return main_image, pos, neg, torch.from_numpy(np.array(lbls, dtype=np.float32))
 
     def _get_single_item(self, index):
         label, image_path = self.shuffled_data[index]

@@ -187,8 +187,23 @@ class ModelMethods:
             metric.reset_acc()
 
             with tqdm(total=len(train_loader), desc=f'Epoch {epoch + 1}/{args.epochs}') as t:
-                for batch_id, (img1, img2, label) in enumerate(train_loader, 1):
+                for batch_id, (main_img, pos, neg, lbls) in enumerate(train_loader, 1):
+                    import pdb
+                    pdb.set_trace()
+                    """
+                    (Pdb) main_img.shape
+                    torch.Size([8, 3, 300, 300])
 
+                    (Pdb) neg.shape
+                    torch.Size([8, 2, 3, 300, 300])
+                    
+                    (Pdb) pos.shape
+                    torch.Size([8, 1, 3, 300, 300])
+                    
+                    (Pdb) lbls.shape
+                    torch.Size([8, 3])
+
+                    """
                     # print('input: ', img1.size())
 
                     if args.cuda:
