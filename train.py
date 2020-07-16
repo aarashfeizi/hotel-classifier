@@ -90,11 +90,11 @@ def main():
         test_set = OmniglotTest(args, transform=transforms.ToTensor())
     elif args.dataset_name == 'hotels':
 
-        train_set = HotelTrain(args, transform=data_transforms_train, mode='train', save_pictures=True)
+        train_set = HotelTrain(args, transform=data_transforms_train, mode='train', save_pictures=False)
         print('*' * 10)
-        val_set_known = HotelTest(args, transform=data_transforms_val, mode='val_seen', save_pictures=True)
+        val_set_known = HotelTest(args, transform=data_transforms_val, mode='val_seen', save_pictures=False)
         print('*' * 10)
-        val_set_unknown = HotelTest(args, transform=data_transforms_val, mode='val_unseen', save_pictures=True)
+        val_set_unknown = HotelTest(args, transform=data_transforms_val, mode='val_unseen', save_pictures=False)
         print('*' * 10)
 
         if args.test:

@@ -70,14 +70,14 @@ class HotelTrain(Dataset):
                 save = True
                 img1_random = random.randint(0, 1000)
                 img2_random = random.randint(0, 1000)
-                image1.save(f'hotel_imagesamples/train/train_{class1}_{img1_random}_before.png')
+                image1.save(f'hotel_imagesamples/train/train_{self.class1}_{img1_random}_before.png')
                 image2.save(f'hotel_imagesamples/train/train_{class2}_{img2_random}_before.png')
 
             image2 = self.transform(image2)
             image1 = self.transform(image1)
 
             if save:
-                save_image(image1, f'hotel_imagesamples/train/train_{class1}_{img1_random}_after.png')
+                save_image(image1, f'hotel_imagesamples/train/train_{self.class1}_{img1_random}_after.png')
                 save_image(image2, f'hotel_imagesamples/train/train_{class2}_{img2_random}_after.png')
 
         return image1, image2, torch.from_numpy(np.array([label], dtype=np.float32))
