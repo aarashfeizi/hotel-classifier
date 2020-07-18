@@ -380,7 +380,10 @@ def _get_per_class_distance(args, img_feats, img_lbls, seen_list, logger):
         ret_seens = np.delete(seen_list, idx)
 
         ret_lbls = [x for _, x in sorted(zip(ret_scores, ret_lbls), reverse=True)]
+        ret_seens = [x for _, x in sorted(zip(ret_scores, ret_seens), reverse=True)]
+
         ret_lbls = np.array(ret_lbls)
+        ret_seens = np.array(ret_seens)
 
         metric_total.update(lbl, ret_lbls)
 
