@@ -10,6 +10,7 @@ from sklearn.metrics import confusion_matrix
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+import torch.nn.functional as F
 
 import utils
 
@@ -188,8 +189,8 @@ class ModelMethods:
 
             with tqdm(total=len(train_loader), desc=f'Epoch {epoch + 1}/{args.epochs}') as t:
                 for batch_id, (main_img, pos, neg, lbls) in enumerate(train_loader, 1):
-                    import pdb
-                    pdb.set_trace()
+                    # import pdb
+                    # pdb.set_trace()
                     """
                     (Pdb) main_img.shape
                     torch.Size([8, 3, 300, 300])
@@ -207,11 +208,14 @@ class ModelMethods:
                     # print('input: ', img1.size())
 
                     if args.cuda:
-                        img1, img2, label = Variable(img1.cuda()), Variable(img2.cuda()), Variable(label.cuda())
+                        main_img, pos, neg, lbls = Variable(main_img.cuda()), Variable(pos.cuda()), Variable(
+                            neg.cuda()), Variable(lbls.cuda())
                     else:
-                        img1, img2, label = Variable(img1), Variable(img2), Variable(label)
+                        main_img, pos, neg, lbls = Variable(main_img), Variable(pos), Variable(neg), Variable(lbls)
 
                     if not drew_graph:
+                        img1 = main_img
+                        img2 = pos[:, 0, :, :, :]
                         self.writer.add_graph(net, (img1, img2), verbose=True)
                         self.writer.flush()
                         drew_graph = True
@@ -219,15 +223,22 @@ class ModelMethods:
                     net.train()
                     opt.zero_grad()
 
-                    output = net.forward(img1, img2)
-                    metric.update_acc(output, label)
-                    loss = loss_fn(output, label)
+                    output = net.forward(main_img, pos[:, 0, :, :])
+                    metric.update_acc(output, lbls[:, 0])
+                    loss = F.logsigmoid(output)
+
+                    for i in range(neg.shape[1]):
+                        output = net.forward(main_img, neg[:, i, :, :])
+                        metric.update_acc(output, lbls[:, i + 1])
+                        loss += F.logsigmoid(-1 * output)
                     # print('loss: ', loss.item())
+                    loss = - loss.mean()
                     train_loss += loss.item()
+                    # self.logger.info(f'Epoch {epoch} loss {loss}')
                     loss.backward()
 
                     opt.step()
-                    t.set_postfix(loss=f'{train_loss / batch_id:.4f}', train_acc=f'{metric.get_acc():.4f}')
+                    t.set_postfix(avg_loss=f'{train_loss / batch_id:.4f}', loss=f'{loss.item()}', train_acc=f'{metric.get_acc():.4f}')
 
                     # if total_batch_id % args.log_freq == 0:
                     #     logger.info('epoch: %d, batch: [%d]\tacc:\t%.5f\tloss:\t%.5f\ttime lapsed:\t%.2f s' % (

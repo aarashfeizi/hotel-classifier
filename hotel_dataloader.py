@@ -50,9 +50,9 @@ class HotelTrain(Dataset):
         pos_img = Image.open(random.choice(self.datas[class1])).convert('RGB')
         pos_img = pos_img.convert('RGB')
         pos = [pos_img]
-
         lbls.append(1)
 
+        # get negative examples
         neg = []
 
         for i in range(self.no_negative):
@@ -68,8 +68,6 @@ class HotelTrain(Dataset):
             neg_img = neg_img.convert('RGB')
             neg.append(neg_img)
             lbls.append(0)
-
-
 
         save = False
         if self.transform:
@@ -87,11 +85,8 @@ class HotelTrain(Dataset):
             for i, neg_i in enumerate(neg):
                 neg[i] = self.transform(neg_i)
 
-
             neg = torch.stack(neg)
             pos = torch.stack(pos)
-
-
 
             if save:
                 save_image(pos[0], f'hotel_imagesamples/train/train_{class1}_{img1_random}_after.png')
