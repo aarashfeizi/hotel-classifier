@@ -5,9 +5,11 @@ import os
 import time
 
 import h5py
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
+from sklearn.decomposition import PCA
 from sklearn.metrics.pairwise import cosine_similarity
 from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
@@ -696,3 +698,18 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
 
     print(f'finish loading {mode} dataset to memory')
     return datas, num_classes, num_instances, labels, datas_bg
+
+
+def project_2d(features, labels, title):
+    pca = PCA(n_components=2)
+    pca_feats = pca.fit_transform(features)
+    cmap = plt.cm.jet
+    # extract all colors from the .jet map
+    cmaplist = [cmap(i) for i in range(cmap.N)]
+    # create the new map
+    cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
+    plt.scatter(pca_feats[:, 0], pca_feats[:, 1], c=labels, cmap=cmap, alpha=0.2)
+    plt.colorbar()
+    plt.title(title)
+
+    return plt
