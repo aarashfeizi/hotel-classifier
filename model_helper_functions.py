@@ -189,8 +189,6 @@ class ModelMethods:
 
             with tqdm(total=len(train_loader), desc=f'Epoch {epoch + 1}/{args.epochs}') as t:
                 for batch_id, (main_img, pos, neg, lbls) in enumerate(train_loader, 1):
-                    # import pdb
-                    # pdb.set_trace()
                     """
                     (Pdb) main_img.shape
                     torch.Size([8, 3, 300, 300])
@@ -223,22 +221,30 @@ class ModelMethods:
                     net.train()
                     opt.zero_grad()
 
-                    output = net.forward(main_img, pos[:, 0, :, :])
+                    output, main_img_rep, pos_img_rep = net.forward(main_img, pos[:, 0, :, :], return_reps=True)
+
                     metric.update_acc(output, lbls[:, 0])
-                    loss = F.logsigmoid(output)
+
+                    loss = F.logsigmoid(
+                        torch.bmm(main_img_rep.unsqueeze(dim=1), pos_img_rep.unsqueeze(dim=2)).squeeze())
 
                     for i in range(neg.shape[1]):
-                        output = net.forward(main_img, neg[:, i, :, :])
+                        output, main_img_rep, neg_img_rep = net.forward(main_img, neg[:, i, :, :], return_reps=True)
                         metric.update_acc(output, lbls[:, i + 1])
-                        loss += F.logsigmoid(-1 * output)
+
+                        loss += F.logsigmoid(
+                            -1 * torch.bmm(main_img_rep.unsqueeze(dim=1), neg_img_rep.unsqueeze(dim=2)).squeeze())
                     # print('loss: ', loss.item())
+
+                    loss /= (neg.shape[1] + pos.shape[1])
                     loss = - loss.mean()
                     train_loss += loss.item()
                     # self.logger.info(f'Epoch {epoch} loss {loss}')
                     loss.backward()
 
                     opt.step()
-                    t.set_postfix(avg_loss=f'{train_loss / batch_id:.4f}', loss=f'{loss.item()}', train_acc=f'{metric.get_acc():.4f}')
+                    t.set_postfix(avg_loss=f'{train_loss / batch_id:.4f}', loss=f'{loss.item()}',
+                                  train_acc=f'{metric.get_acc():.4f}')
 
                     # if total_batch_id % args.log_freq == 0:
                     #     logger.info('epoch: %d, batch: [%d]\tacc:\t%.5f\tloss:\t%.5f\ttime lapsed:\t%.2f s' % (

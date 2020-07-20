@@ -14,14 +14,14 @@ class TopModel(nn.Module):
         # print('SIAMESE NET')
         # print(self.sm_net)
 
-    def forward(self, x1, x2, single=False):
+    def forward(self, x1, x2, single=False, return_reps=False):
         # print('model input:', x1[-1].size())
 
         x1_f, x1_l = self.ft_net(x1, is_feat=True)
 
         if not single:
             x2_f, x2_l = self.ft_net(x2, is_feat=True)
-            output = self.sm_net(x1_f[-1], x2_f[-1])
+            output = self.sm_net(x1_f[-1], x2_f[-1], return_reps=return_reps)
         else:
             output = self.sm_net(x1_f[-1], None, single)  # single is true
 
