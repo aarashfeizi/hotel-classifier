@@ -408,13 +408,18 @@ class ModelMethods:
 
         return tests_right, tests_error, test_acc
 
-    def make_emb_db(self, args, net, data_loader, newly_trained=True, batch_size=None):
+    def make_emb_db(self, args, net, data_loader, eval_sampled, eval_per_class, newly_trained=True, batch_size=None,
+                    mode='val'):
         """
 
+        :param batch_size:
+        :param eval_sampled:
+        :param eval_per_class:
+        :param newly_trained:
+        :param mode:
         :param args: utils args
         :param net: trained top_model network
         :param data_loader: DataLoader object
-        :param val: validation or not
         :return: None
         """
 
@@ -451,21 +456,22 @@ class ModelMethods:
                 test_paths[idx * batch_size:end] = path
                 test_seen[idx * batch_size:end] = seen.to(int)
 
-            utils.save_h5('test_ids', test_paths, 'S20', os.path.join(self.save_path, 'testIds.h5'))
-            utils.save_h5('test_classes', test_classes, 'i8', os.path.join(self.save_path, 'testClasses.h5'))
-            utils.save_h5('test_feats', test_feats, 'f', os.path.join(self.save_path, 'testFeats.h5'))
-            utils.save_h5('test_seen', test_seen, 'i2', os.path.join(self.save_path, 'testSeen.h5'))
+            utils.save_h5(f'{mode}_ids', test_paths, 'S20', os.path.join(self.save_path, f'{mode}Ids.h5'))
+            utils.save_h5(f'{mode}_classes', test_classes, 'i8', os.path.join(self.save_path, f'{mode}Classes.h5'))
+            utils.save_h5(f'{mode}_feats', test_feats, 'f', os.path.join(self.save_path, f'{mode}Feats.h5'))
+            utils.save_h5(f'{mode}_seen', test_seen, 'i2', os.path.join(self.save_path, f'{mode}Seen.h5'))
 
-        test_feats = utils.load_h5('test_feats', os.path.join(self.save_path, 'testFeats.h5'))
-        test_classes = utils.load_h5('test_classes', os.path.join(self.save_path, 'testClasses.h5'))
-        test_seen = utils.load_h5('test_seen', os.path.join(self.save_path, 'testSeen.h5'))
+        test_feats = utils.load_h5(f'{mode}_feats', os.path.join(self.save_path, f'{mode}Feats.h5'))
+        test_classes = utils.load_h5(f'{mode}_classes', os.path.join(self.save_path, f'{mode}Classes.h5'))
+        test_seen = utils.load_h5(f'{mode}_seen', os.path.join(self.save_path, f'{mode}Seen.h5'))
 
         utils.calculate_k_at_n(args, test_feats, test_classes, test_seen, logger=self.logger,
                                limit=args.limit_samples,
                                run_number=args.number_of_runs,
                                save_path=self.save_path,
-                               sampled=args.sampled_results,
-                               per_class=args.per_class_results)
+                               sampled=eval_sampled,
+                               per_class=eval_per_class,
+                               mode=mode)
 
         self.logger.info('results at: ' + self.save_path)
 

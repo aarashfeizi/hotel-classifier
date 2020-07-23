@@ -164,10 +164,11 @@ class Percision_At_K():
         # f'recall@100 = {r100}\n'
 
     def get_tot_metrics(self):
-        return (self.k1 / self.n), \
-               (self.k5 / self.n), \
-               (self.k10 / self.n), \
-               (self.k100 / self.n)
+
+        return (self.k1 / max(self.n, 1)), \
+               (self.k5 / max(self.n, 1)), \
+               (self.k10 / max(self.n, 1)), \
+               (self.k100 / max(self.n, 1))
 
     def get_per_class_metrics(self):
 
@@ -177,10 +178,15 @@ class Percision_At_K():
         assert sum(self.per_class_k10) == self.k10
         assert sum(self.per_class_k100) == self.k100
 
-        k1s, k5s, k10s, k100s = (self.per_class_k1 / self.per_class_n), \
-                                (self.per_class_k5 / self.per_class_n), \
-                                (self.per_class_k10 / self.per_class_n), \
-                                (self.per_class_k100 / self.per_class_n)
+        if self.n == 0:
+            denom = [1 for _ in range(len(self.per_class_n))]
+        else:
+            denom = self.per_class_n
+
+        k1s, k5s, k10s, k100s = (self.per_class_k1 / denom), \
+                                (self.per_class_k5 / denom), \
+                                (self.per_class_k10 / denom), \
+                                (self.per_class_k100 / denom)
 
         d = {'label': self.classes,
              'n': self.per_class_n,
@@ -350,22 +356,23 @@ def load_h5(data_description, path):
 
 
 def calculate_k_at_n(args, img_feats, img_lbls, seen_list, logger, limit=0, run_number=0, sampled=True,
-                     per_class=False, save_path=''):
+                     per_class=False, save_path='', mode=''):
+
     if per_class:
-        total, seen, unseen = _get_per_class_distance(args, img_feats, img_lbls, seen_list, logger)
-        total.to_csv(os.path.join(save_path, 'per_class_total_avg_k@n.csv'), header=True, index=False)
-        seen.to_csv(os.path.join(save_path, 'per_class_seen_avg_k@n.csv'), header=True, index=False)
-        unseen.to_csv(os.path.join(save_path, 'per_class_unseen_avg_k@n.csv'), header=True, index=False)
+        total, seen, unseen = _get_per_class_distance(args, img_feats, img_lbls, seen_list, logger, mode)
+        total.to_csv(os.path.join(save_path, f'{mode}_per_class_total_avg_k@n.csv'), header=True, index=False)
+        seen.to_csv(os.path.join(save_path, f'{mode}_per_class_seen_avg_k@n.csv'), header=True, index=False)
+        unseen.to_csv(os.path.join(save_path, f'{mode}_per_class_unseen_avg_k@n.csv'), header=True, index=False)
 
     if sampled:
         kavg, kruns = _get_sampled_distance(args, img_feats, img_lbls, seen_list, logger, limit, run_number)
-        kavg.to_csv(os.path.join(save_path, 'sampled_avg_k@n.csv'), header=True, index=False)
-        kruns.to_csv(os.path.join(save_path, 'sampled_runs_k@n.csv'), header=True, index=False)
+        kavg.to_csv(os.path.join(save_path, f'{mode}_sampled_avg_k@n.csv'), header=True, index=False)
+        kruns.to_csv(os.path.join(save_path, f'{mode}_sampled_runs_k@n.csv'), header=True, index=False)
 
     return True
 
 
-def _get_per_class_distance(args, img_feats, img_lbls, seen_list, logger):
+def _get_per_class_distance(args, img_feats, img_lbls, seen_list, logger, mode):
     all_lbls = np.unique(img_lbls)
     seen_lbls = np.unique(img_lbls[seen_list == 1])
     unseen_lbls = np.unique(img_lbls[seen_list == 0])
@@ -398,19 +405,25 @@ def _get_per_class_distance(args, img_feats, img_lbls, seen_list, logger):
     seen = metric_seen.get_per_class_metrics()
     unseen = metric_unseen.get_per_class_metrics()
 
+    logger.info(f'{mode}')
     logger.info('Without sampling Total: ' + str(metric_total.n))
     logger.info(metric_total)
 
+    logger.info(f'{mode}')
     _log_per_class(logger, total, split_kind='Total')
 
+    logger.info(f'{mode}')
     logger.info('Without sampling Seen: ' + str(metric_seen.n))
     logger.info(metric_seen)
 
+    logger.info(f'{mode}')
     _log_per_class(logger, seen, split_kind='Seen')
 
+    logger.info(f'{mode}')
     logger.info('Without sampling Unseen: ' + str(metric_unseen.n))
     logger.info(metric_unseen)
 
+    logger.info(f'{mode}')
     _log_per_class(logger, unseen, split_kind='Unseen')
 
     return total, seen, unseen
@@ -453,6 +466,7 @@ def _get_sampled_distance(args, img_feats, img_lbls, seen_list, logger, limit=0,
         sampled_indices = np.array(sampled_indices_all[column_name]).astype(int)
         sampled_labels = np.array(sampled_label_all[column_name]).astype(int)
 
+        logger.info(f'{mode}')
         logger.info('### Run ' + str(run) + "...")
         chosen_img_feats = img_feats[sampled_indices]
         chosen_img_lbls = img_lbls[sampled_indices]
