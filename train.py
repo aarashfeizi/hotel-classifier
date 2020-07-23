@@ -105,6 +105,7 @@ def main():
 
         if args.cbir:
             db_set = Hotel_DB(args, transform=data_transforms_val, mode='val')
+            db_set_train = Hotel_DB(args, transform=data_transforms_val, mode='train')
 
     else:
         logger.error(f'Dataset not suppored:  {args.dataset_name}')
@@ -140,6 +141,9 @@ def main():
 
     if args.cbir:
         db_loader = DataLoader(db_set, batch_size=args.db_batch, shuffle=False, num_workers=workers,
+                               pin_memory=pin_memory)
+
+        db_loader_train = DataLoader(db_set_train, batch_size=args.db_batch, shuffle=False, num_workers=workers,
                                pin_memory=pin_memory)
 
     loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean')

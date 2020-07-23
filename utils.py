@@ -640,7 +640,8 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
     background_datasets = {'val_seen': 'val_unseen',
                            'val_unseen': 'val_seen',
                            'test_seen': 'test_unseen',
-                           'test_unseen': 'test_seen'}
+                           'test_unseen': 'test_seen',
+                           'train_seen': 'train_seen'}
 
     print("begin loading dataset to memory")
     datas = {}
@@ -713,3 +714,28 @@ def project_2d(features, labels, title):
     plt.title(title)
 
     return plt
+
+def choose_n_from_all(df, n=4):
+    chosen_labels = []
+    chosen_images = []
+
+    lbls = np.array(df.label)
+    images = np.array(df.image)
+
+    lbls_unique = np.unique(lbls)
+
+    for lbl in lbls_unique:
+        mask = lbls == lbl
+        single_lbl_paths = images[mask]
+
+        if len(single_lbl_paths) > n:
+            temp = np.random.choice(single_lbl_paths, size=n, replace=False)
+            chosen_images.extend(temp)
+            chosen_labels.extend([lbl for _ in range(n)])
+        else:
+            chosen_images.extend(single_lbl_paths)
+            chosen_labels.extend([lbl for _ in range(len(single_lbl_paths))])
+
+    data = {'label': chosen_labels, 'image': chosen_images}
+
+    return pd.DataFrame(data=data)

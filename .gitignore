@@ -22,3 +22,4 @@ correct_files/
 index_making_tempfiles/
 *.jpg
 k_at_n_results/
+negative_pair_randomcrop_tensorboard/
