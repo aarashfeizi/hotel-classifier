@@ -357,7 +357,6 @@ def load_h5(data_description, path):
 
 def calculate_k_at_n(args, img_feats, img_lbls, seen_list, logger, limit=0, run_number=0, sampled=True,
                      per_class=False, save_path='', mode=''):
-
     if per_class:
         total, seen, unseen = _get_per_class_distance(args, img_feats, img_lbls, seen_list, logger, mode)
         total.to_csv(os.path.join(save_path, f'{mode}_per_class_total_avg_k@n.csv'), header=True, index=False)
@@ -702,7 +701,9 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
         for idx, path in zip(image_labels_bg, image_path_bg):
             if idx not in datas_bg.keys():
                 datas_bg[idx] = []
-            datas_bg[idx].append((os.path.join(dataset_path, path), False))
+            if (os.path.join(dataset_path, path), False) not in datas_bg[idx] and \
+                    (os.path.join(dataset_path, path), True) not in datas_bg[idx]:
+                datas_bg[idx].append((os.path.join(dataset_path, path), False))
 
     labels = np.unique(image_labels)
     print(f'Number of labels in {mode}: ', len(labels))
@@ -728,6 +729,7 @@ def project_2d(features, labels, title):
     plt.title(title)
 
     return plt
+
 
 def choose_n_from_all(df, n=4):
     chosen_labels = []
