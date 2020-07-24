@@ -364,9 +364,13 @@ def calculate_k_at_n(args, img_feats, img_lbls, seen_list, logger, limit=0, run_
         unseen.to_csv(os.path.join(save_path, f'{mode}_per_class_unseen_avg_k@n.csv'), header=True, index=False)
 
     if sampled:
-        kavg, kruns = _get_sampled_distance(args, img_feats, img_lbls, seen_list, logger, limit, run_number)
+        kavg, kruns, total, seen, unseen = _get_sampled_distance(args, img_feats, img_lbls, seen_list, logger, limit,
+                                                                 run_number, mode)
         kavg.to_csv(os.path.join(save_path, f'{mode}_sampled_avg_k@n.csv'), header=True, index=False)
         kruns.to_csv(os.path.join(save_path, f'{mode}_sampled_runs_k@n.csv'), header=True, index=False)
+        total.to_csv(os.path.join(save_path, f'{mode}_sampled_per_class_total_avg_k@n.csv'), header=True, index=False)
+        seen.to_csv(os.path.join(save_path, f'{mode}_sampled_per_class_seen_avg_k@n.csv'), header=True, index=False)
+        unseen.to_csv(os.path.join(save_path, f'{mode}_sampled_per_class_unseen_avg_k@n.csv'), header=True, index=False)
 
     return True
 
@@ -437,7 +441,7 @@ def _log_per_class(logger, df, split_kind=''):
     logger.info(f'k@100 per class average: {np.array(df["k@100"]).mean()}\n')
 
 
-def _get_sampled_distance(args, img_feats, img_lbls, seen_list, logger, limit=0, run_number=0):
+def _get_sampled_distance(args, img_feats, img_lbls, seen_list, logger, limit=0, run_number=0, mode=''):
     all_lbls = np.unique(img_lbls)
     seen_lbls = np.unique(img_lbls[seen_list == 1])
     unseen_lbls = np.unique(img_lbls[seen_list == 0])
@@ -493,6 +497,10 @@ def _get_sampled_distance(args, img_feats, img_lbls, seen_list, logger, limit=0,
             else:
                 metric_unseen.update(lbl, ret_lbls[ret_seens == 0])
 
+        total = metric_total.get_per_class_metrics()
+        seen = metric_seen.get_per_class_metrics()
+        unseen = metric_unseen.get_per_class_metrics()
+
         logger.info('Total: ' + str(metric_total.n))
         logger.info(metric_total)
         k1, k5, k10, k100 = metric_total.get_tot_metrics()
@@ -519,6 +527,14 @@ def _get_sampled_distance(args, img_feats, img_lbls, seen_list, logger, limit=0,
         k10s_u.append(k10)
         k100s_u.append(k100)
         logger.info("*" * 50)
+
+        _log_per_class(logger, total, split_kind='Total')
+        _log_per_class(logger, seen, split_kind='Seen')
+        _log_per_class(logger, unseen, split_kind='Unseen')
+
+    total = metric_total.get_per_class_metrics()
+    seen = metric_seen.get_per_class_metrics()
+    unseen = metric_unseen.get_per_class_metrics()
 
     logger.info('Avg Total: ' + str(metric_total.n))
     logger.info('k@1: ' + str(np.array(k1s).mean()))
@@ -568,7 +584,7 @@ def _get_sampled_distance(args, img_feats, img_lbls, seen_list, logger, limit=0,
                                      'avg_kAT10_unseen': [np.array(k10s_u).mean()],
                                      'avg_kAT100_unseen': [np.array(k100s_u).mean()]})
 
-    return average_tot, pd.DataFrame(data=d)
+    return average_tot, pd.DataFrame(data=d), total, seen, unseen
 
 
 def get_shuffled_data(datas, seed=0, one_hot=True, both_seen_unseen=False, shuffle=True):  # for sequential labels only
@@ -755,3 +771,12 @@ def choose_n_from_all(df, n=4):
     data = {'label': chosen_labels, 'image': chosen_images}
 
     return pd.DataFrame(data=data)
+
+
+def create_save_path(path, id_str, logger):
+    if not os.path.exists(path):
+        os.mkdir(path)
+        logger.info(
+            f'Created save and tensorboard directories:\n{path}\n')
+    else:
+        logger.info(f'Save directory {path} already exists, but how?? {id_str}')  # almost impossible

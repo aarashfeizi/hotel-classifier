@@ -29,6 +29,7 @@ class ModelMethods:
 
         if args.pretrained_model_dir == '':
             self.save_path = os.path.join(args.save_path, self.model_name + id_str)
+            utils.create_save_path(self.save_path, id_str, self.logger)
         else:
             self.logger.info(f"Using pretrained path... \nargs.pretrained_model_dir: {args.pretrained_model_dir}")
             self.save_path = os.path.join(args.save_path, args.pretrained_model_dir)
@@ -38,12 +39,6 @@ class ModelMethods:
         self.logger.info("** Save path: " + self.save_path)
         self.logger.info("** Tensorboard path: " + self.tensorboard_path)
 
-        if not os.path.exists(self.save_path):
-            os.mkdir(self.save_path)
-            self.logger.info(
-                f'Created save and tensorboard directories:\n{self.save_path}\nand\n{self.tensorboard_path}')
-        else:
-            self.logger.info(f'Save directory {self.save_path} already exists, but how?? {id_str}')  # almost impossible
 
     def _parse_args(self, args):
         name = 'model-' + self.model
@@ -62,7 +57,8 @@ class ModelMethods:
                           # 'dataset_split_type',
                           'normalize',
                           'limit_samples',
-                          'number_of_runs']
+                          'number_of_runs',
+                          'no_negative']
 
         for arg in vars(args):
             if str(arg) in important_args:
