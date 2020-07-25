@@ -33,7 +33,7 @@ class LiSiamese(nn.Module):
             x = self.layer1(x)
         return x
 
-    def forward(self, x1, x2, single=False):
+    def forward(self, x1, x2, single=False, feats=False):
         out1 = self.forward_one(x1)
         if single:
             return out1
@@ -42,4 +42,7 @@ class LiSiamese(nn.Module):
         dis = torch.abs(out1 - out2)
         out = self.out(dis)
         #  return self.sigmoid(out)
-        return out
+        if feats:
+            return out, out1, out2
+        else:
+            return out

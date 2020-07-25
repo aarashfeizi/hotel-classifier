@@ -10,6 +10,7 @@ from cub_dataloader import *
 from hotel_dataloader import *
 from models.top_model import *
 from omniglot_dataloader import *
+from losses import TripletLoss
 
 
 ###
@@ -65,8 +66,8 @@ def main():
     train_set = None
     test_set = None
     val_set = None
-    val_set_known = None
-    val_set_unknown = None
+    val_set_known_fewshot = None
+    val_set_unknown_fewshot = None
 
     # train_classification_dataset = CUBClassification(args, transform=data_transforms, mode='train')
 
@@ -79,9 +80,9 @@ def main():
 
         elif args.dataset_split_type == 'new':  # mode = [knwn_cls_test, knwn_cls_val, train, uknwn_cls_test, uknwn_cls_val]
             train_set = CUBTrain_Top(args, transform=data_transforms_train, mode='train')
-            val_set_known = CUBTest_Fewshot(args, transform=data_transforms_val, mode='val_seen')
+            val_set_known_fewshot = CUBTest_Fewshot(args, transform=data_transforms_val, mode='val_seen')
             test_set_known = CUBTest_Fewshot(args, transform=data_transforms_val, mode='test_seen')
-            val_set_unknown = CUBTest_Fewshot(args, transform=data_transforms_val, mode='val_unseen')
+            val_set_unknown_fewshot = CUBTest_Fewshot(args, transform=data_transforms_val, mode='val_unseen')
             test_set_unknown = CUBTest_Fewshot(args, transform=data_transforms_val, mode='test_unseen')
 
     elif args.dataset_name == 'omniglot':
@@ -90,18 +91,31 @@ def main():
         test_set = OmniglotTest(args, transform=transforms.ToTensor())
     elif args.dataset_name == 'hotels':
 
-        train_set = HotelTrain(args, transform=data_transforms_train, mode='train', save_pictures=False)
         print('*' * 10)
-        val_set_known = HotelTest(args, transform=data_transforms_val, mode='val_seen', save_pictures=False)
+        if args.metric_learning:
+            train_set = HotelTrain_Metric(args, transform=data_transforms_train, mode='train', save_pictures=False)
+            print('*' * 10)
+            val_set_known_metric = HotelTrain_Metric(args, transform=data_transforms_val, mode='val_seen',
+                                                     save_pictures=False)
+            print('*' * 10)
+            val_set_unknown_metric = HotelTrain_Metric(args, transform=data_transforms_val, mode='val_unseen',
+                                                       save_pictures=False)
+
+        else:
+            train_set = HotelTrain_FewShot(args, transform=data_transforms_train, mode='train', save_pictures=False)
+            print('*' * 10)
+
+        val_set_known_fewshot = HotelTest(args, transform=data_transforms_val, mode='val_seen', save_pictures=False)
         print('*' * 10)
-        val_set_unknown = HotelTest(args, transform=data_transforms_val, mode='val_unseen', save_pictures=False)
-        print('*' * 10)
+        val_set_unknown_fewshot = HotelTest(args, transform=data_transforms_val, mode='val_unseen', save_pictures=False)
 
         if args.test:
             test_set_known = HotelTest(args, transform=data_transforms_val, mode='test_seen')
             print('*' * 10)
             test_set_unknown = HotelTest(args, transform=data_transforms_val, mode='test_unseen')
             print('*' * 10)
+
+            # todo test not supported for metric learning
 
         if args.cbir:
             db_set = Hotel_DB(args, transform=data_transforms_val, mode='val')
@@ -137,7 +151,12 @@ def main():
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=False, num_workers=workers,
                               pin_memory=pin_memory)
 
-    val_loaders = utils.get_val_loaders(args, val_set, val_set_known, val_set_unknown, workers, pin_memory)
+    val_loaders_fewshot = utils.get_val_loaders(args, val_set, val_set_known_fewshot, val_set_unknown_fewshot, workers,
+                                                pin_memory)
+
+    if args.metric_learning:
+        val_loaders_metric = utils.get_val_loaders(args, val_set, val_set_known_metric, val_set_unknown_metric, workers,
+                                                   pin_memory)
 
     if args.cbir:
         db_loader = DataLoader(db_set, batch_size=args.db_batch, shuffle=False, num_workers=workers,
@@ -146,15 +165,18 @@ def main():
         db_loader_train = DataLoader(db_set_train, batch_size=args.db_batch, shuffle=False, num_workers=workers,
                                      pin_memory=pin_memory)
 
-    loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean')
-
-    # train resnet
+    if args.loss == 'bce':
+        loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean')
+    elif args.loss == 'trpl':
+        loss_fn_bce = torch.nn.BCEWithLogitsLoss(reduction='mean')
+        loss_fn = TripletLoss(margin=args.margin)
+    else:
+        raise Exception('Loss function not supported: ' + args.loss)
 
     num_classes = train_set.num_classes
     logger.info(f'Num classes in train: {num_classes}')
 
     model_methods_top = model_helper_functions.ModelMethods(args, logger, 'top')
-    # tm_net = top_module(args=args, trained_feat_net=feat_net, num_classes=num_classes)
     tm_net = top_module(args=args, num_classes=num_classes)
 
     print(model_methods_top.save_path)
@@ -169,7 +191,13 @@ def main():
     logger.info('Training Top')
     if args.model_name == '':
         logger.info('Training')
-        tm_net, best_model_top = model_methods_top.train_fewshot(tm_net, loss_fn, args, train_loader, val_loaders)
+        if args.metric_learning:
+            tm_net, best_model_top = model_methods_top.train_metriclearning(tm_net, loss_fn, loss_fn_bce, args,
+                                                                            train_loader, val_loaders_metric,
+                                                                            val_loaders_fewshot)
+        else:
+            tm_net, best_model_top = model_methods_top.train_fewshot(tm_net, loss_fn, args, train_loader,
+                                                                     val_loaders_fewshot)
         logger.info('Calculating K@Ns for Validation')
 
         model_methods_top.make_emb_db(args, tm_net, db_loader_train,

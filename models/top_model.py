@@ -14,21 +14,31 @@ class TopModel(nn.Module):
         # print('SIAMESE NET')
         # print(self.sm_net)
 
-    def forward(self, x1, x2, single=False):
+    def forward(self, x1, x2, single=False, feats=False):
         # print('model input:', x1[-1].size())
 
         x1_f, x1_l = self.ft_net(x1, is_feat=True)
+        out1, out2 = None, None
+
+        if single and feats:
+            raise Exception('Both single and feats cannot be True')
 
         if not single:
             x2_f, x2_l = self.ft_net(x2, is_feat=True)
-            output = self.sm_net(x1_f[-1], x2_f[-1])
+            if feats:
+                output, out1, out2 = self.sm_net(x1_f[-1], x2_f[-1], feats=feats)
+            else:
+                output = self.sm_net(x1_f[-1], x2_f[-1], feats=False)
         else:
             output = self.sm_net(x1_f[-1], None, single)  # single is true
 
         # print('features:', x2_f[-1].size())
         # print('output:', output.size())
 
-        return output
+        if feats:
+            return output, out1, out2
+        else:
+            return output
 
 
 def top_module(args, trained_feat_net=None, trained_sm_net=None, num_classes=1):

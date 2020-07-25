@@ -9,9 +9,76 @@ from utils import get_shuffled_data, loadDataToMem
 from torchvision.utils import save_image
 
 
-class HotelTrain(Dataset):
+class HotelTrain_Metric(Dataset):
+    def __init__(self, args, transform=None, mode='f', save_pictures=False):
+        super(HotelTrain_Metric, self).__init__()
+        np.random.seed(args.seed)
+        self.transform = transform
+        self.save_pictures = save_pictures
+        self.no_negative = args.no_negative
+
+        self.datas, self.num_classes, self.length, self.labels, _ = loadDataToMem(args.dataset_path, args.dataset_name,
+                                                                                  args.dataset_split_type,
+                                                                                  mode=mode,
+                                                                                  split_file_name=args.splits_file_name,
+                                                                                  portion=args.portion)
+
+        self.shuffled_data = get_shuffled_data(datas=self.datas, seed=args.seed)
+
+        print('hotel train classes: ', self.num_classes)
+        print('hotel train length: ', self.length)
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, index):
+
+        anch_idx = random.randint(0, self.num_classes - 1)
+        anch_class = self.labels[anch_idx]
+        anch = Image.open(random.choice(self.datas[anch_class]))
+
+        # get pos image from same class
+        pos = Image.open(random.choice(self.datas[anch_class]))
+
+        # get neg image from different class
+        neg_idx = random.randint(0, self.num_classes - 1)
+        neg_class = self.labels[neg_idx]
+
+        while anch_class == neg_class:
+            neg_idx = random.randint(0, self.num_classes - 1)
+            neg_class = self.labels[neg_idx]
+
+            # class1 = self.labels[idx1]
+
+            # image1 = Image.open(random.choice(self.datas[self.class1]))
+        neg = Image.open(random.choice(self.datas[neg_class]))
+
+        anch = anch.convert('RGB')
+        pos = pos.convert('RGB')
+        neg = neg.convert('RGB')
+        save = False
+        if self.transform:
+            if self.save_pictures and random.random() < 0.0001:
+                save = True
+                img1_random = random.randint(0, 1000)
+                img2_random = random.randint(0, 1000)
+                anch.save(f'hotel_imagesamples/train/train_{anch_class}_{img1_random}_before.png')
+                neg.save(f'hotel_imagesamples/train/train_{neg_class}_{img2_random}_before.png')
+
+            anch = self.transform(anch)
+            pos = self.transform(pos)
+            neg = self.transform(neg)
+
+            if save:
+                save_image(anch, f'hotel_imagesamples/train/train_{anch_class}_{img1_random}_after.png')
+                save_image(neg, f'hotel_imagesamples/train/train_{neg_class}_{img2_random}_after.png')
+
+        return anch, pos, neg
+
+
+class HotelTrain_FewShot(Dataset):
     def __init__(self, args, transform=None, mode='train', save_pictures=False):
-        super(HotelTrain, self).__init__()
+        super(HotelTrain_FewShot, self).__init__()
         np.random.seed(args.seed)
         self.transform = transform
         self.save_pictures = save_pictures
