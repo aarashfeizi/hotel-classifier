@@ -213,14 +213,12 @@ class ModelMethods:
                     output_pos, anch_feat, pos_feat = net.forward(anch, pos, feats=True)
                     output_neg, anch_feat, neg_feat = net.forward(anch, neg, feats=True)
 
-                    metric.update_acc(output_pos, one_labels)
-                    metric.update_acc(output_neg, zero_labels)
+                    metric.update_acc(output_pos.squeeze(), one_labels.squeeze())
+                    metric.update_acc(output_neg.squeeze(), zero_labels.squeeze())
 
-                    bce_loss_value_pos = bce_loss(output_pos, one_labels)
-                    bce_loss_value_neg = bce_loss(output_pos, one_labels)
-
+                    bce_loss_value_pos = bce_loss(output_pos.squeeze(), one_labels.squeeze())
+                    bce_loss_value_neg = bce_loss(output_pos.squeeze(), zero_labels.squeeze())
                     loss = loss_fn(anch_feat, pos_feat, neg_feat)
-
                     # print('loss: ', loss.item())
                     train_loss += loss.item()
                     train_loss_bces = (bce_loss_value_neg.item() + bce_loss_value_pos.item()) / 2
@@ -391,7 +389,7 @@ class ModelMethods:
                     opt.zero_grad()
 
                     output = net.forward(img1, img2)
-                    metric.update_acc(output, label)
+                    metric.update_acc(output.squeeze(), label.squeeze())
                     loss = loss_fn(output, label)
                     # print('loss: ', loss.item())
                     train_loss += loss.item()

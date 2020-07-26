@@ -12,8 +12,6 @@ class TripletLoss(nn.Module):
 
         dist = pos_dist - neg_dist + self.margin
 
-        loss = torch.max(
-            torch.tensor([0, dist])
-        )
+        loss = nn.ReLU()(dist)
 
         return loss

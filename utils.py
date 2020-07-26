@@ -81,7 +81,11 @@ class Metric:
         # print(label.size())
         # print('output: ', output)
         # print(label)
-        batch_rights = sum(label.type(torch.int64) == pred.type(torch.int64)).cpu().numpy()[0]
+        import pdb
+
+        # pdb.set_trace()
+        # print('pox', sum(label.type(torch.int64) == pred.type(torch.int64)).cpu().numpy())
+        batch_rights = sum(label.type(torch.int64) == pred.type(torch.int64)).cpu().numpy()
 
         # print(f'batch_rights: {batch_rights}')
 
@@ -91,7 +95,7 @@ class Metric:
     def get_acc(self):
         # print('rights: ', self.rights)
         # print('wrongs: ', self.wrongs)
-        return ((self.rights) / (self.rights + self.wrongs)) * 100
+        return (self.rights / (self.rights + self.wrongs)) * 100
 
     def get_right_wrong(self):
         return {'right': self.rights, 'wrong': self.wrongs}
@@ -261,6 +265,8 @@ def get_args():
 
     parser.add_argument('-mtlr', '--metric_learning', default=False, action='store_true')
     parser.add_argument('-mg', '--margin', default=1.0, type=float, help="margin for triplet loss")
+    parser.add_argument('-lss', '--loss', default='bce', choices=['bce', 'trpl'])
+
 
     parser.add_argument('-n', '--normalize', default=False, action='store_true')
 
