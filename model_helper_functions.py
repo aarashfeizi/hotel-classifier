@@ -55,9 +55,11 @@ class ModelMethods:
                           'extra_layer',
                           # 'dataset_split_type',
                           'normalize',
-                          'limit_samples',
+                          # 'limit_samples',
                           'number_of_runs',
-                          'no_negative']
+                          'no_negative',
+                          'margin',
+                          'loss']
 
         for arg in vars(args):
             if str(arg) in important_args:

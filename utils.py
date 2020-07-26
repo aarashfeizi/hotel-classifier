@@ -264,7 +264,7 @@ def get_args():
     parser.add_argument('-ptb', '--project_tb', default=False, action='store_true')
 
     parser.add_argument('-mtlr', '--metric_learning', default=False, action='store_true')
-    parser.add_argument('-mg', '--margin', default=1.0, type=float, help="margin for triplet loss")
+    parser.add_argument('-mg', '--margin', default=0.0, type=float, help="margin for triplet loss")
     parser.add_argument('-lss', '--loss', default='bce', choices=['bce', 'trpl'])
 
 
