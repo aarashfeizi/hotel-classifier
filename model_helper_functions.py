@@ -181,6 +181,7 @@ class ModelMethods:
         for epoch in range(epochs):
 
             train_loss = 0
+            train_loss_bces = 0
             metric.reset_acc()
 
             with tqdm(total=len(train_loader), desc=f'Epoch {epoch + 1}/{args.epochs}') as t:
@@ -223,7 +224,7 @@ class ModelMethods:
                     loss = loss_fn(anch_feat, pos_feat, neg_feat)
                     # print('loss: ', loss.item())
                     train_loss += loss.item()
-                    train_loss_bces = (bce_loss_value_neg.item() + bce_loss_value_pos.item()) / 2
+                    train_loss_bces += (bce_loss_value_neg.item() + bce_loss_value_pos.item()) / 2
 
                     loss.backward()  # training with triplet loss
 
