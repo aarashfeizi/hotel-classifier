@@ -257,7 +257,7 @@ class ModelMethods:
                                                                                          bce_loss, val=True,
                                                                                          epoch=epoch, comment='known')
                             self.test_metric(args, net, val_loaders[0],
-                                             bce_loss, val=True,
+                                             loss_fn, val=True,
                                              epoch=epoch, comment='known')
 
                             val_rgt_unknwn, val_err_unknwn, val_acc_unknwn = self.test_fewshot(args, net,
@@ -266,7 +266,7 @@ class ModelMethods:
                                                                                                epoch=epoch,
                                                                                                comment='unknown')
                             self.test_metric(args, net,
-                                             val_loaders[1], bce_loss,
+                                             val_loaders[1], loss_fn,
                                              val=True,
                                              epoch=epoch,
                                              comment='unknown')
@@ -565,10 +565,6 @@ class ModelMethods:
         test_label[0] = 1
         test_label = torch.from_numpy(test_label).reshape((args.way, 1))
 
-        if args.cuda:
-            test_label = Variable(test_label.cuda())
-        else:
-            test_label = Variable(test_label)
 
         for _, (anch, pos, neg) in enumerate(data_loader, 1):
             if args.cuda:
