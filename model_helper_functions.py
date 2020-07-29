@@ -6,10 +6,12 @@ from collections import deque
 
 import numpy as np
 import torch
+from matplotlib.lines import Line2D
 from sklearn.metrics import confusion_matrix
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 import utils
 
@@ -226,7 +228,14 @@ class ModelMethods:
                     train_loss += loss.item()
                     train_loss_bces += (bce_loss_value_neg.item() + bce_loss_value_pos.item()) / 2
 
+                    # print(loss.grad)
+                    # import pdb
+                    # pdb.set_trace()
+
                     loss.backward()  # training with triplet loss
+                    # plt = self.plot_grad_flow(net.named_parameters())
+                    # pdb.set_trace()
+                    # self.getBack(loss.grad_fn)
 
                     opt.step()
                     t.set_postfix(triplet_loss=f'{train_loss / batch_id:.4f}',
@@ -397,7 +406,9 @@ class ModelMethods:
                     # print('loss: ', loss.item())
                     train_loss += loss.item()
                     loss.backward()
-
+                    # plt = self.plot_grad_flow(net.named_parameters())
+                    # import pdb
+                    # pdb.set_trace()
                     opt.step()
                     t.set_postfix(loss=f'{train_loss / batch_id:.4f}', train_acc=f'{metric.get_acc():.4f}')
 
@@ -708,3 +719,50 @@ class ModelMethods:
         torch.save({'epoch': epoch, 'model_state_dict': net.state_dict()},
                    self.save_path + '/' + best_model)
         return best_model
+
+    def getBack(self, var_grad_fn):
+        print(var_grad_fn)
+        for n in var_grad_fn.next_functions:
+            if n[0]:
+                try:
+                    tensor = getattr(n[0], 'variable')
+                    print(n[0])
+                    print('Tensor with grad found:', tensor)
+                    print(' - gradient:', tensor.grad)
+                    print()
+                except AttributeError as e:
+                    self.getBack(n[0])
+
+
+    def plot_grad_flow(self, named_parameters):
+        '''Plots the gradients flowing through different layers in the net during training.
+        Can be used for checking for possible gradient vanishing / exploding problems.
+
+        Usage: Plug this function in Trainer class after loss.backwards() as
+        "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow'''
+        ave_grads = []
+        max_grads = []
+        layers = []
+        for n, p in named_parameters:
+            if (p.requires_grad) and ("bias" not in n):
+                if p.grad is None:
+                    print(n, p)
+                    continue
+                layers.append(n)
+                ave_grads.append(p.grad.abs().mean())
+                max_grads.append(p.grad.abs().max())
+        plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
+        plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
+        plt.hlines(0, 0, len(ave_grads) + 1, lw=2, color="k")
+        plt.xticks(range(0, len(ave_grads), 1), layers, rotation="vertical")
+        plt.xlim(left=0, right=len(ave_grads))
+        plt.ylim(bottom=-0.001, top=0.02)  # zoom in on the lower gradient regions
+        plt.xlabel("Layers")
+        plt.ylabel("average gradient")
+        plt.title("Gradient flow")
+        plt.grid(True)
+        plt.legend([Line2D([0], [0], color="c", lw=4),
+                    Line2D([0], [0], color="b", lw=4),
+                    Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
+
+        return plt

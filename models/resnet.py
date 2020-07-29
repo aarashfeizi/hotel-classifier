@@ -126,7 +126,7 @@ class ResNet(tResNet):
 
     def __init__(self, block, layers, num_classes):
         super(ResNet, self).__init__(block, layers)
-        self.new_fc = nn.Linear(512, num_classes)
+        # self.new_fc = nn.Linear(512, num_classes)
 
     def forward(self, x, is_feat=False):
 

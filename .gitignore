@@ -23,3 +23,8 @@ index_making_tempfiles/
 *.jpg
 k_at_n_results/
 negative_pair_randomcrop_tensorboard/
+*.pdf
+scripts/
+*.txt
+*.gv
+tb_debug_triplet/

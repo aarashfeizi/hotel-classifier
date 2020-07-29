@@ -21,7 +21,9 @@ class HotelTrain_Metric(Dataset):
                                                                                   args.dataset_split_type,
                                                                                   mode=mode,
                                                                                   split_file_name=args.splits_file_name,
-                                                                                  portion=args.portion)
+                                                                                  portion=args.portion,
+                                                                                  split_path=args.splits_path,
+                                                                                  dataset_folder=args.dataset_folder)
 
         self.shuffled_data = get_shuffled_data(datas=self.datas, seed=args.seed)
 
@@ -90,7 +92,9 @@ class HotelTrain_FewShot(Dataset):
                                                                                   args.dataset_split_type,
                                                                                   mode=mode,
                                                                                   split_file_name=args.splits_file_name,
-                                                                                  portion=args.portion)
+                                                                                  portion=args.portion,
+                                                                                  split_path=args.splits_path,
+                                                                                  dataset_folder=args.dataset_folder)
 
         self.shuffled_data = get_shuffled_data(datas=self.datas, seed=args.seed)
 
@@ -189,7 +193,9 @@ class HotelTest(Dataset):
                                                                                     args.dataset_name,
                                                                                     args.dataset_split_type, mode=mode,
                                                                                     split_file_name=args.splits_file_name,
-                                                                                    portion=args.portion)
+                                                                                    portion=args.portion,
+                                                                                    split_path=args.splits_path,
+                                                                                    dataset_folder=args.dataset_folder)
 
         print(f'hotel {mode} classes: ', self.num_classes)
         print(f'hotel {mode} length: ', self.__len__())
@@ -252,7 +258,9 @@ class Hotel_DB(Dataset):
                                                                                     args.dataset_split_type,
                                                                                     mode=mode_tmp,
                                                                                     split_file_name=args.splits_file_name,
-                                                                                    portion=args.portion)
+                                                                                    portion=args.portion,
+                                                                                    split_path=args.splits_path,
+                                                                                    dataset_folder=args.dataset_folder)
 
         # if total:
         self.all_shuffled_data = get_shuffled_data(self.datas_bg,

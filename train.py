@@ -143,7 +143,10 @@ def main():
     # workers = 4
     # pin_memory = False
     if args.find_best_workers:
-        workers, pin_memory = utils.get_best_workers_pinmemory(args, train_set, pin_memories=[True], starting_from=0)
+        workers, pin_memory = utils.get_best_workers_pinmemory(args, train_set,
+                                                               pin_memories=[True],
+                                                               starting_from=0,
+                                                               logger=logger)
     else:
         workers = args.workers
         pin_memory = args.pin_memory
@@ -221,7 +224,7 @@ def main():
         logger.info('Calculating K@Ns for Validation')
         model_methods_top.make_emb_db(args, tm_net, db_loader_train,
                                       eval_sampled=False,
-                                      eval_per_class=True, newly_trained=False,
+                                      eval_per_class=True, newly_trained=True,
                                       batch_size=args.db_batch,
                                       mode='train_sampled')
         model_methods_top.make_emb_db(args, tm_net, db_loader,

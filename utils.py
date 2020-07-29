@@ -81,10 +81,10 @@ class Metric:
         # print(label.size())
         # print('output: ', output)
         # print(label)
-        import pdb
+        # import pdb
 
         # pdb.set_trace()
-        # print('pox', sum(label.type(torch.int64) == pred.type(torch.int64)).cpu().numpy())
+        # print('pox.txt', sum(label.type(torch.int64) == pred.type(torch.int64)).cpu().numpy())
         batch_rights = sum(label.type(torch.int64) == pred.type(torch.int64)).cpu().numpy()
 
         # print(f'batch_rights: {batch_rights}')
@@ -216,9 +216,11 @@ def get_args():
 
     parser.add_argument('-dsn', '--dataset_name', default='omniglot', choices=['omniglot', 'cub', 'hotels'])
     parser.add_argument('-dsp', '--dataset_path', default='CUB/')
+    parser.add_argument('-df', '--dataset_folder', default='hotels_trainval/')
     parser.add_argument('-por', '--portion', default=0, type=int)
     parser.add_argument('-dst', '--dataset_split_type', default='new', choices=['original', 'new'])
     parser.add_argument('-sfn', '--splits_file_name', default='splits_50k')
+    parser.add_argument('-spp', '--splits_path', default='')
     parser.add_argument('-ls', '--limit_samples', default=0, type=int, help="Limit samples per class for val and test")
     parser.add_argument('-nor', '--number_of_runs', default=1, type=int, help="Number of times to sample for k@n")
     parser.add_argument('-sdp', '--subdir_path', default='images/')
@@ -267,7 +269,6 @@ def get_args():
     parser.add_argument('-mg', '--margin', default=0.0, type=float, help="margin for triplet loss")
     parser.add_argument('-lss', '--loss', default='bce', choices=['bce', 'trpl'])
 
-
     parser.add_argument('-n', '--normalize', default=False, action='store_true')
 
     args = parser.parse_args()
@@ -275,7 +276,7 @@ def get_args():
     return args
 
 
-def loading_time(args, train_set, use_cuda, num_workers, pin_memory):
+def loading_time(args, train_set, use_cuda, num_workers, pin_memory, logger):
     kwargs = {'num_workers': num_workers, 'pin_memory': pin_memory} if use_cuda else {}
     train_loader = torch.utils.data.DataLoader(
         train_set, batch_size=args.batch_size, shuffle=False, **kwargs)
@@ -286,22 +287,22 @@ def loading_time(args, train_set, use_cuda, num_workers, pin_memory):
                 break
             pass
     end = time.time()
-    print("  Used {} second with num_workers = {}".format(end - start, num_workers))
+    logger.info("  Used {} second with num_workers = {}".format(end - start, num_workers))
     return end - start
 
 
-def get_best_workers_pinmemory(args, train_set, pin_memories=[False, True], starting_from=0):
+def get_best_workers_pinmemory(args, train_set, pin_memories=[False, True], starting_from=0, logger=None):
     use_cuda = torch.cuda.is_available()
     core_number = multiprocessing.cpu_count()
     batch_size = 64
     best_num_worker = [0, 0]
     best_time = [99999999, 99999999]
-    print('cpu_count =', core_number)
+    logger.info('cpu_count =', core_number)
 
     for pin_memory in pin_memories:
-        print("While pin_memory =", pin_memory)
+        logger.info("While pin_memory =", pin_memory)
         for num_workers in range(starting_from, core_number * 2 + 1, 4):
-            current_time = loading_time(args, train_set, use_cuda, num_workers, pin_memory)
+            current_time = loading_time(args, train_set, use_cuda, num_workers, pin_memory, logger)
             if current_time < best_time[pin_memory]:
                 best_time[pin_memory] = current_time
                 best_num_worker[pin_memory] = num_workers
@@ -312,17 +313,17 @@ def get_best_workers_pinmemory(args, train_set, pin_memories=[False, True], star
                     the_range = list(range(best_num_worker[pin_memory] - 3, best_num_worker[pin_memory]))
                 for num_workers in (
                         the_range + list(range(best_num_worker[pin_memory] + 1, best_num_worker[pin_memory] + 4))):
-                    current_time = loading_time(args, train_set, use_cuda, num_workers, pin_memory)
+                    current_time = loading_time(args, train_set, use_cuda, num_workers, pin_memory, logger)
                     if current_time < best_time[pin_memory]:
                         best_time[pin_memory] = current_time
                         best_num_worker[pin_memory] = num_workers
                 break
     if best_time[0] < best_time[1]:
-        print("Best num_workers =", best_num_worker[0], "with pin_memory = False")
+        logger.info("Best num_workers =", best_num_worker[0], "with pin_memory = False")
         workers = best_num_worker[0]
         pin_memory = False
     else:
-        print("Best num_workers =", best_num_worker[1], "with pin_memory = True")
+        logger.info("Best num_workers =", best_num_worker[1], "with pin_memory = True")
         workers = best_num_worker[1]
         pin_memory = True
 
@@ -668,12 +669,12 @@ def _read_new_split(dataset_path, mode,
 
 
 def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_name='final_newsplits0_1',
-                  portion=0, return_paths=False):
+                  portion=0, return_paths=False, split_path=None, dataset_folder=''):
     print(split_file_name, '!!!!!!!!')
     if dataset_name == 'cub':
-        dataset_path = os.path.join(dataPath, 'CUB')
+        dataset_path = os.path.join(dataPath, dataset_folder)
     elif dataset_name == 'hotels':
-        dataset_path = os.path.join(dataPath, 'hotels_trainval')
+        dataset_path = os.path.join(dataPath, dataset_folder)
 
     background_datasets = {'val_seen': 'val_unseen',
                            'val_unseen': 'val_seen',
@@ -685,12 +686,15 @@ def loadDataToMem(dataPath, dataset_name, split_type, mode='train', split_file_n
     datas = {}
     datas_bg = {}  # in case of mode == val/test_seen/unseen
 
+    if split_path == '':
+        split_path = dataset_path
+
     if split_type == 'original':
-        image_path, image_labels = _read_org_split(dataset_path, mode)
+        image_path, image_labels = _read_org_split(split_path, mode)
     elif split_type == 'new':
-        image_path, image_labels = _read_new_split(os.path.join(dataset_path, split_file_name), mode, dataset_name)
+        image_path, image_labels = _read_new_split(os.path.join(split_path, split_file_name), mode, dataset_name)
         if mode != 'train':
-            image_path_bg, image_labels_bg = _read_new_split(os.path.join(dataset_path, split_file_name),
+            image_path_bg, image_labels_bg = _read_new_split(os.path.join(split_path, split_file_name),
                                                              background_datasets[mode], dataset_name)
 
     if portion > 0:
@@ -789,3 +793,17 @@ def create_save_path(path, id_str, logger):
             f'Created save and tensorboard directories:\n{path}\n')
     else:
         logger.info(f'Save directory {path} already exists, but how?? {id_str}')  # almost impossible
+
+
+def add_mask(img, mask):
+    img_size = img.size
+    mask_size = mask.size
+
+    random_x = np.random.randint(0, img_size[0] - mask_size[0])
+    random_y = np.random.randint(0, img_size[1] - mask_size[1])
+
+    pos = (random_x, random_y)
+
+    img.paste(mask, pos, mask)
+
+    return img
