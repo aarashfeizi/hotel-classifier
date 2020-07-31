@@ -297,10 +297,10 @@ def get_best_workers_pinmemory(args, train_set, pin_memories=[False, True], star
     batch_size = 64
     best_num_worker = [0, 0]
     best_time = [99999999, 99999999]
-    logger.info('cpu_count =', core_number)
+    logger.info(f'cpu_count = {core_number}')
 
     for pin_memory in pin_memories:
-        logger.info("While pin_memory =", pin_memory)
+        logger.info(f'While pin_memory = {pin_memory}')
         for num_workers in range(starting_from, core_number * 2 + 1, 4):
             current_time = loading_time(args, train_set, use_cuda, num_workers, pin_memory, logger)
             if current_time < best_time[pin_memory]:
@@ -319,11 +319,11 @@ def get_best_workers_pinmemory(args, train_set, pin_memories=[False, True], star
                         best_num_worker[pin_memory] = num_workers
                 break
     if best_time[0] < best_time[1]:
-        logger.info("Best num_workers =", best_num_worker[0], "with pin_memory = False")
+        logger.info(f"Best num_workers = {best_num_worker[0]} with pin_memory = False")
         workers = best_num_worker[0]
         pin_memory = False
     else:
-        logger.info("Best num_workers =", best_num_worker[1], "with pin_memory = True")
+        logger.info(f"Best num_workers = {best_num_worker[1]} with pin_memory = True")
         workers = best_num_worker[1]
         pin_memory = True
 
